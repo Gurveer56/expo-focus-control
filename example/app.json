@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "expo-focus-control-example",
+    "slug": "expo-focus-control-example",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "android": {
+      "package": "expo.modules.focuscontrol.example"
+    },
+    "ios": {
+      "bundleIdentifier": "expo.modules.focuscontrol.example",
+      "supportsTablet": true
+    },
+    "plugins": [
+      [
+        "../app.plugin.js",
+        {
+          "android": {
+            "usageStats": false,
+            "accessibilityBlocking": false,
+            "overlay": false,
+            "websiteBlocking": false,
+            "focusForegroundService": false,
+            "notifications": false,
+            "exactAlarms": false,
+            "bootReceiver": false,
+            "batteryOptimizationExemption": false,
+            "packageVisibility": {
+              "mode": "selected",
+              "packages": []
+            }
+          },
+          "ios": {
+            "familyControls": false,
+            "deviceActivity": false,
+            "managedSettings": false
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "autolinkingModuleResolution": true
+    }
+  }
+}

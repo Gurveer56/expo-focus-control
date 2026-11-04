@@ -1,0 +1,3 @@
+# expo-focus-control
+
+permissions

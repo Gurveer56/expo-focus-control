@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Accessibility service configuration for FocusAccessibilityService.
+  
+  This service monitors TYPE_WINDOW_STATE_CHANGED events to detect
+  foreground app changes for focus/blocking features.
+  
+  IMPORTANT: isAccessibilityTool is NOT set to true because this is
+  a productivity app, not a disability-assistance tool. Setting it to
+  true would violate Google Play policies.
+  
+  canRetrieveWindowContent is false — we never read screen text.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:canRetrieveWindowContent="false"
+    android:description="@string/focus_accessibility_service_description"
+    android:notificationTimeout="300"
+    android:packageNames=""
+    android:settingsActivity="" />
+
