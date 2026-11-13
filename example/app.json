@@ -18,17 +18,16 @@
         "../app.plugin.js",
         {
           "android": {
-            "usageStats": false,
-            "accessibilityBlocking": false,
-            "overlay": false,
-            "websiteBlocking": false,
-            "focusForegroundService": false,
-            "notifications": false,
-            "exactAlarms": false,
-            "bootReceiver": false,
+            "usageStats": true,
+            "accessibilityBlocking": true,
+            "overlay": true,
+            "websiteBlocking": true,
+            "focusForegroundService": true,
+            "exactAlarms": true,
+            "bootReceiver": true,
             "batteryOptimizationExemption": false,
             "packageVisibility": {
-              "mode": "selected",
+              "mode": "all",
               "packages": []
             }
           },

@@ -93,6 +93,96 @@ public class ExpoFocusControlModule: Module {
       return "unavailable"
     }
 
+    Function("requestVpnPermission") { () -> Bool in
+      return false
+    }
+
+    // ── Phase 3: Focus Session APIs ─────────────────────────────────────
+
+    Function("startFocusSession") { (durationSeconds: Double, sessionName: String?, enableAppBlocking: Bool?) -> [String: Any] in
+      return [
+        "isActive": false,
+        "isPaused": false,
+        "sessionName": sessionName ?? "Focus Session",
+        "durationSeconds": durationSeconds,
+        "remainingSeconds": durationSeconds,
+        "elapsedSeconds": 0,
+        "autoAppBlocking": enableAppBlocking ?? true
+      ]
+    }
+
+    Function("stopFocusSession") { () -> [String: Any] in
+      return [
+        "isActive": false,
+        "isPaused": false,
+        "sessionName": "Focus Session",
+        "durationSeconds": 0,
+        "remainingSeconds": 0,
+        "elapsedSeconds": 0,
+        "autoAppBlocking": true
+      ]
+    }
+
+    Function("pauseFocusSession") { () -> [String: Any] in
+      return [
+        "isActive": false,
+        "isPaused": false,
+        "sessionName": "Focus Session",
+        "durationSeconds": 0,
+        "remainingSeconds": 0,
+        "elapsedSeconds": 0,
+        "autoAppBlocking": true
+      ]
+    }
+
+    Function("resumeFocusSession") { () -> [String: Any] in
+      return [
+        "isActive": false,
+        "isPaused": false,
+        "sessionName": "Focus Session",
+        "durationSeconds": 0,
+        "remainingSeconds": 0,
+        "elapsedSeconds": 0,
+        "autoAppBlocking": true
+      ]
+    }
+
+    Function("getFocusSessionStatus") { () -> [String: Any] in
+      return [
+        "isActive": false,
+        "isPaused": false,
+        "sessionName": "Focus Session",
+        "durationSeconds": 0,
+        "remainingSeconds": 0,
+        "elapsedSeconds": 0,
+        "autoAppBlocking": true
+      ]
+    }
+
+    // ── Phase 3: Website Blocking APIs ──────────────────────────────────
+
+    Function("setBlockedWebsites") { (domains: [String]) in
+    }
+
+    Function("getBlockedWebsites") { () -> [String] in
+      return []
+    }
+
+    Function("startWebsiteBlocking") { () -> Bool in
+      return false
+    }
+
+    Function("stopWebsiteBlocking") { () in
+    }
+
+    Function("getWebsiteBlockingStatus") { () -> [String: Any] in
+      return [
+        "isActive": false,
+        "blockedWebsites": [] as [String],
+        "vpnServiceRunning": false
+      ]
+    }
+
     // ── Usage Stats ─────────────────────────────────────────────────────
 
     AsyncFunction("queryUsageStats") { (startTime: Double, endTime: Double, excludeSelf: Bool, limit: Int, sortByUsage: Bool) -> [String: Any] in
@@ -103,6 +193,12 @@ public class ExpoFocusControlModule: Module {
         "startTime": startTime,
         "endTime": endTime
       ]
+    }
+
+    AsyncFunction("getInstalledApplications") { (includeSystemApps: Bool) -> [[String: Any]] in
+      // iOS sandboxing prevents querying other third-party installed apps.
+      // In Phase 4, Screen Time / FamilyControls FamilyActivityPicker will be used.
+      return []
     }
 
     // ── Platform Info ───────────────────────────────────────────────────

@@ -46,7 +46,6 @@ describe('Expo Focus Control - Config Plugin', () => {
       expect(result.android.overlay).toBe(false);
       expect(result.android.websiteBlocking).toBe(false);
       expect(result.android.focusForegroundService).toBe(false);
-      expect(result.android.notifications).toBe(false);
       expect(result.android.exactAlarms).toBe(false);
       expect(result.android.bootReceiver).toBe(false);
       expect(result.android.batteryOptimizationExemption).toBe(false);
@@ -139,8 +138,8 @@ describe('Expo Focus Control - Config Plugin', () => {
 
       const services = result.manifest.application[0].service.map((s: any) => s.$['android:name']);
       expect(services).toContain('.AppService'); // Preserved!
-      expect(services).not.toContain('.FocusAccessibilityService');
-      expect(services).not.toContain('.FocusVpnService');
+      expect(services).not.toContain('expo.modules.focuscontrol.FocusAccessibilityService');
+      expect(services).not.toContain('expo.modules.focuscontrol.FocusVpnService');
     });
 
     it('adds all permissions and services when all features are enabled', () => {
@@ -151,7 +150,6 @@ describe('Expo Focus Control - Config Plugin', () => {
         overlay: true,
         websiteBlocking: true,
         focusForegroundService: true,
-        notifications: true,
         exactAlarms: true,
         bootReceiver: true,
         batteryOptimizationExemption: true,
@@ -166,7 +164,7 @@ describe('Expo Focus Control - Config Plugin', () => {
 
       expect(permissions).toContain('android.permission.PACKAGE_USAGE_STATS');
       expect(permissions).toContain('android.permission.SYSTEM_ALERT_WINDOW');
-      expect(permissions).toContain('android.permission.POST_NOTIFICATIONS');
+      expect(permissions).not.toContain('android.permission.POST_NOTIFICATIONS');
       expect(permissions).toContain('android.permission.FOREGROUND_SERVICE');
       expect(permissions).toContain('android.permission.FOREGROUND_SERVICE_SPECIAL_USE');
       expect(permissions).toContain('android.permission.RECEIVE_BOOT_COMPLETED');
@@ -178,8 +176,9 @@ describe('Expo Focus Control - Config Plugin', () => {
       const services = app.service;
 
       // Check AccessibilityService declaration
-      const accessService = services.find((s: any) => s.$['android:name'] === '.FocusAccessibilityService');
+      const accessService = services.find((s: any) => s.$['android:name'] === 'expo.modules.focuscontrol.FocusAccessibilityService');
       expect(accessService).toBeDefined();
+      expect(accessService.$['android:exported']).toBe('true');
       expect(accessService.$['android:permission']).toBe('android.permission.BIND_ACCESSIBILITY_SERVICE');
       expect(accessService['intent-filter'][0].action[0].$['android:name']).toBe(
         'android.accessibilityservice.AccessibilityService'
@@ -187,23 +186,28 @@ describe('Expo Focus Control - Config Plugin', () => {
       expect(accessService['meta-data'][0].$['android:resource']).toBe('@xml/focus_accessibility_service');
 
       // Check VpnService declaration
-      const vpnService = services.find((s: any) => s.$['android:name'] === '.FocusVpnService');
+      const vpnService = services.find((s: any) => s.$['android:name'] === 'expo.modules.focuscontrol.FocusVpnService');
       expect(vpnService).toBeDefined();
+      expect(vpnService.$['android:exported']).toBe('true');
       expect(vpnService.$['android:permission']).toBe('android.permission.BIND_VPN_SERVICE');
       expect(vpnService['intent-filter'][0].action[0].$['android:name']).toBe('android.net.VpnService');
 
       // Check FocusSessionService
-      const sessionService = services.find((s: any) => s.$['android:name'] === '.FocusSessionService');
+      const sessionService = services.find((s: any) => s.$['android:name'] === 'expo.modules.focuscontrol.FocusSessionService');
       expect(sessionService).toBeDefined();
+      expect(sessionService.$['android:exported']).toBe('false');
       expect(sessionService.$['android:foregroundServiceType']).toBe('specialUse');
+      expect(sessionService.property[0].$['android:name']).toBe('android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE');
 
       // Check OverlayService
-      const overlayService = services.find((s: any) => s.$['android:name'] === '.FocusOverlayService');
+      const overlayService = services.find((s: any) => s.$['android:name'] === 'expo.modules.focuscontrol.FocusOverlayService');
       expect(overlayService).toBeDefined();
+      expect(overlayService.$['android:exported']).toBe('false');
 
       // Check BootReceiver
-      const bootReceiver = app.receiver.find((r: any) => r.$['android:name'] === '.FocusBootReceiver');
+      const bootReceiver = app.receiver.find((r: any) => r.$['android:name'] === 'expo.modules.focuscontrol.FocusBootReceiver');
       expect(bootReceiver).toBeDefined();
+      expect(bootReceiver.$['android:exported']).toBe('false');
       expect(bootReceiver['intent-filter'][0].action[0].$['android:name']).toBe(
         'android.intent.action.BOOT_COMPLETED'
       );
@@ -251,7 +255,7 @@ describe('Expo Focus Control - Config Plugin', () => {
       expect(overlayPerms).toHaveLength(1);
 
       const accessServices = result.manifest.application[0].service.filter(
-        (s: any) => s.$['android:name'] === '.FocusAccessibilityService'
+        (s: any) => s.$['android:name'] === 'expo.modules.focuscontrol.FocusAccessibilityService'
       );
       expect(accessServices).toHaveLength(1);
     });
@@ -287,7 +291,7 @@ describe('Expo Focus Control - Config Plugin', () => {
 
       expect(
         result.manifest.application[0].service.some(
-          (s: any) => s.$['android:name'] === '.FocusAccessibilityService'
+          (s: any) => s.$['android:name'] === 'expo.modules.focuscontrol.FocusAccessibilityService'
         )
       ).toBe(false);
 

@@ -79,12 +79,8 @@ export function modifyAndroidManifest(
     removePermission('android.permission.SYSTEM_ALERT_WINDOW');
   }
 
-  // ── Notifications ───────────────────────────────────────────────────
-  if (androidConfig.notifications) {
-    addPermission('android.permission.POST_NOTIFICATIONS');
-  } else {
-    removePermission('android.permission.POST_NOTIFICATIONS');
-  }
+  // Ensure POST_NOTIFICATIONS is NEVER injected by this module
+  removePermission('android.permission.POST_NOTIFICATIONS');
 
   // ── Foreground Service ──────────────────────────────────────────────
   if (androidConfig.focusForegroundService) {

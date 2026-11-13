@@ -1,6 +1,10 @@
 package expo.modules.focuscontrol
 
 import android.content.Context
+import android.content.Intent
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
+import android.os.Build
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
@@ -54,20 +58,20 @@ class ExpoFocusControlModule : Module() {
       permissionManager.openOverlaySettings()
     }
 
-    Function("getNotificationPermissionStatus") {
-      permissionManager.getNotificationPermissionStatus()
-    }
-
-    Function("openNotificationSettings") {
-      permissionManager.openNotificationSettings()
-    }
-
     Function("getBatteryOptimizationStatus") {
       permissionManager.getBatteryOptimizationStatus()
     }
 
+    Function("getBatteryDiagnostics") {
+      permissionManager.getBatteryDiagnostics()
+    }
+
     Function("openBatterySettings") {
       permissionManager.openBatterySettings()
+    }
+
+    Function("openOemBatterySettings") {
+      permissionManager.openOemBatterySettings()
     }
 
     Function("getExactAlarmStatus") {
@@ -82,6 +86,133 @@ class ExpoFocusControlModule : Module() {
       permissionManager.getVpnStatus()
     }
 
+    Function("requestVpnPermission") {
+      permissionManager.requestVpnPermission()
+    }
+
+    // ── Phase 2: App Blocking APIs ──────────────────────────────────────
+
+    Function("setBlockedApplications") { packages: List<String> ->
+      FocusBlockingManager.setBlockedApplications(context, packages)
+    }
+
+    Function("startAppBlocking") {
+      FocusBlockingManager.startAppBlocking(context)
+    }
+
+    Function("stopAppBlocking") {
+      FocusBlockingManager.stopAppBlocking(context)
+    }
+
+    Function("getAppBlockingStatus") {
+      mapOf(
+        "isBlockingActive" to FocusBlockingManager.isAppBlockingActive(context),
+        "blockedApplications" to FocusBlockingManager.getBlockedApplications(context),
+        "overlayShowing" to FocusOverlayManager.isOverlayShowing()
+      )
+    }
+
+    // ── Phase 3: Focus Session & Website Blocking APIs ──────────────────
+
+    Function("startFocusSession") { durationSeconds: Long, sessionName: String?, enableAppBlocking: Boolean? ->
+      FocusSessionManager.startFocusSession(
+        context,
+        durationSeconds,
+        sessionName,
+        enableAppBlocking ?: true
+      )
+    }
+
+    Function("stopFocusSession") {
+      FocusSessionManager.stopFocusSession(context)
+    }
+
+    Function("pauseFocusSession") {
+      FocusSessionManager.pauseFocusSession(context)
+    }
+
+    Function("resumeFocusSession") {
+      FocusSessionManager.resumeFocusSession(context)
+    }
+
+    Function("getFocusSessionStatus") {
+      FocusSessionManager.getFocusSessionStatus(context)
+    }
+
+    Function("setBlockedWebsites") { domains: List<String> ->
+      FocusVpnManager.setBlockedWebsites(context, domains)
+    }
+
+    Function("getBlockedWebsites") {
+      FocusVpnManager.getBlockedWebsites(context)
+    }
+
+    Function("startWebsiteBlocking") {
+      FocusVpnManager.startWebsiteBlocking(context)
+    }
+
+    Function("stopWebsiteBlocking") {
+      FocusVpnManager.stopWebsiteBlocking(context)
+    }
+
+    Function("getWebsiteBlockingStatus") {
+      FocusVpnManager.getWebsiteBlockingStatus(context)
+    }
+
+    AsyncFunction("getInstalledApplications") { includeSystemApps: Boolean ->
+      val pm = context.packageManager
+      val launcherIntent = Intent(Intent.ACTION_MAIN).apply {
+        addCategory(Intent.CATEGORY_LAUNCHER)
+      }
+
+      val resolveInfos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        pm.queryIntentActivities(launcherIntent, PackageManager.ResolveInfoFlags.of(0))
+      } else {
+        @Suppress("DEPRECATION")
+        pm.queryIntentActivities(launcherIntent, 0)
+      }
+
+      val seenPackages = mutableSetOf<String>()
+      val appList = mutableListOf<Map<String, Any>>()
+      val myPackageName = context.packageName
+
+      for (resolveInfo in resolveInfos) {
+        val appInfo = resolveInfo.activityInfo?.applicationInfo ?: continue
+        val packageName = appInfo.packageName ?: continue
+
+        // Skip self
+        if (packageName == myPackageName) continue
+
+        // Skip duplicates
+        if (seenPackages.contains(packageName)) continue
+        seenPackages.add(packageName)
+
+        val isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+
+        // If includeSystemApps is false, exclude system apps unless updated by user
+        if (!includeSystemApps && isSystemApp) {
+          val isUpdatedSystemApp = (appInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
+          if (!isUpdatedSystemApp) continue
+        }
+
+        val appName = try {
+          pm.getApplicationLabel(appInfo).toString()
+        } catch (e: Exception) {
+          packageName
+        }
+
+        appList.add(
+          mapOf(
+            "packageName" to packageName,
+            "appName" to appName,
+            "isSystemApp" to isSystemApp
+          )
+        )
+      }
+
+      appList.sortedBy { (it["appName"] as? String)?.lowercase() ?: "" }
+    }
+
     // ── Usage Stats Functions ───────────────────────────────────────────
 
     AsyncFunction("queryUsageStats") { startTime: Long, endTime: Long, excludeSelf: Boolean, limit: Int, sortByUsage: Boolean ->
@@ -93,7 +224,7 @@ class ExpoFocusControlModule : Module() {
     Function("getPlatformInfo") {
       mapOf(
         "platform" to "android",
-        "sdkVersion" to android.os.Build.VERSION.SDK_INT
+        "sdkVersion" to Build.VERSION.SDK_INT
       )
     }
   }

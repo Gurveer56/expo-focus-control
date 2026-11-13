@@ -23,8 +23,6 @@ export interface AndroidConfig {
   websiteBlocking?: boolean;
   /** Enable focus session foreground service. Default: false */
   focusForegroundService?: boolean;
-  /** Enable POST_NOTIFICATIONS permission. Default: false */
-  notifications?: boolean;
   /** Enable SCHEDULE_EXACT_ALARM permission. Default: false */
   exactAlarms?: boolean;
   /** Enable boot receiver for restoring schedules. Default: false */
@@ -57,7 +55,6 @@ export const ANDROID_DEFAULTS: Required<Omit<AndroidConfig, 'packageVisibility'>
   overlay: false,
   websiteBlocking: false,
   focusForegroundService: false,
-  notifications: false,
   exactAlarms: false,
   bootReceiver: false,
   batteryOptimizationExemption: false,
@@ -110,10 +107,6 @@ export function validateConfig(config: FocusControlPluginConfig): {
     if (ac.focusForegroundService !== undefined) {
       if (typeof ac.focusForegroundService !== 'boolean') throw new Error('[expo-focus-control] android.focusForegroundService must be a boolean');
       android.focusForegroundService = ac.focusForegroundService;
-    }
-    if (ac.notifications !== undefined) {
-      if (typeof ac.notifications !== 'boolean') throw new Error('[expo-focus-control] android.notifications must be a boolean');
-      android.notifications = ac.notifications;
     }
     if (ac.exactAlarms !== undefined) {
       if (typeof ac.exactAlarms !== 'boolean') throw new Error('[expo-focus-control] android.exactAlarms must be a boolean');
