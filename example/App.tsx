@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Platform,
   AppState,
+  Image,
   type AppStateStatus,
 } from 'react-native';
 import * as FocusControl from 'expo-focus-control';
@@ -16,13 +17,21 @@ import type {
   AccessibilityStatus,
   AppBlockingStatus,
   BatteryDiagnostics,
+  EmergencyPassConfig,
+  EmergencyPassStatus,
   FocusSessionStatus,
   InstalledApp,
+  OverlayConfig,
   PermissionStatus,
   PermissionStatuses,
   AppUsageRecord,
   WebsiteBlockingStatus,
 } from 'expo-focus-control';
+
+// ── Assets ───────────────────────────────────────────────────────────────
+
+const HOURGLASS_ICON_BASE64 =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAB+UlEQVR42u3ay3HDMBAEUUWj/A8IwkE4F/rigy6yBQL8YOd11QZgTO8Qpvh4AAAAAAAAAAAAAAAAAAAAAAAADPL9fG5pI3UCIDF4EhCAAAQgwFsBkkQnQMDBCD+8BYQfvCG2f+JlsMrfI+3iArj5B0sg/BPeCRCYBJvwSbARgADCJ4HwowW48oD94BMsgfBvJsDZh02A4BYQfnAL+NgjWALhB0vgU6/FBJgdgvCDW0D4wS2g+oMlEH4RAfaE4xv/cAmEHyyA7Q+WQPiLS/BJiFffL3BwC+yRQPhhLfA7Xy8j/LQWGAmfAAu0wEi1/yeSU1+kBUaf77Y/WALbHyzAJ48XLCRAjwSf3i+wmACz3g847aLh97SGU1/k38DRO4AWCNv+nguk0y+6/Vog8OavBQpu/6zfAkhQ98VPexmvhcOqv/UIQIJa29/ejNfDweF7FKx+8ZsQ/pAE0rlw+3dc+oYk0AJ1t58ABbe/7RwS3H37DwyfBHff/hPC3y2B1K4Pf6YAJAjefgIInwQrCdAOHgIEh08CAvRLIM164WuBmwnQLhoSBIfvUSB8EhCgUwIp1wxfC5wsQLvpECA4fBKcIEBbZAgwGH5bXAASDAjQig8J/hCghQwBBt/7lxkCEACpIkidACAAAAAAAAAAAAAAAAAAAAAAAAC7+QFc0A2nwHqQyAAAAABJRU5ErkJggg==';
 
 // ── Permission Dashboard ────────────────────────────────────────────────
 
@@ -388,17 +397,17 @@ function WebsiteSection({ vpnStatus, onToggleDomain, onStartVpn, onStopVpn }: We
         Local DNS sinkhole VPN that intercepts and blocks distracting websites in Chrome, Brave, and other browsers.
       </Text>
 
-      <Text style={styles.label}>Blocked Domains:</Text>
-      <View style={styles.chipContainer}>
+      <Text style={styles.subhead}>Blocked Domains:</Text>
+      <View style={styles.chipRow}>
         {PRESET_DOMAINS.map((domain) => {
           const isSelected = blockedSites.includes(domain);
           return (
             <TouchableOpacity
               key={domain}
-              style={[styles.chip, isSelected && styles.chipActive]}
+              style={[styles.chip, isSelected && styles.chipSelected]}
               onPress={() => onToggleDomain(domain)}
             >
-              <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
+              <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
                 {isSelected ? `✓ ${domain}` : `+ ${domain}`}
               </Text>
             </TouchableOpacity>
@@ -493,6 +502,213 @@ function BatterySection({ diagnostics, onOpenBattery, onOpenOem }: BatterySectio
   );
 }
 
+// ── Live App Blocking Shield Preview ─────────────────────────────────────
+
+interface LimitShieldPreviewProps {
+  appName: string;
+  passesLeft: number;
+  isEmergencyActive: boolean;
+  emergencySecondsLeft: number;
+  onCloseApp: () => void;
+  onEmergencyUse: () => void;
+}
+
+function LimitShieldPreview({
+  appName,
+  passesLeft,
+  isEmergencyActive,
+  emergencySecondsLeft,
+  onCloseApp,
+  onEmergencyUse,
+}: LimitShieldPreviewProps) {
+  return (
+    <View style={styles.limitShieldContainer}>
+      <Text style={styles.previewBadge}>LIVE BLOCKING SHIELD PREVIEW</Text>
+      <View style={styles.limitShieldCard}>
+        {/* Top Icon Area: Crimson circle with hourglass image & overlapping badge */}
+        <View style={styles.heroIconWrapper}>
+          <View style={styles.heroOuterCircle}>
+            <Image
+              source={require('./assets/hourglass_icon.png')}
+              style={styles.heroHourglassImage}
+            />
+          </View>
+          <View style={styles.heroAppBadge}>
+            <Text style={styles.heroAppBadgeText}>💬</Text>
+          </View>
+        </View>
+
+        {/* Heading & Subtitle */}
+        <Text style={styles.limitShieldTitle}>You’ve hit your limit</Text>
+        <Text style={styles.limitShieldSubtitle}>
+          You've used <Text style={styles.limitShieldAppHighlight}>{appName}</Text> for 30 of 30 minutes today.
+        </Text>
+
+        {/* Emergency Pass Info Banner */}
+        <View style={styles.limitShieldBanner}>
+          <View style={styles.bannerIndicatorCircle}>
+            <Text style={styles.bannerIndicatorText}>{isEmergencyActive ? emergencySecondsLeft : passesLeft}</Text>
+          </View>
+          <View style={styles.bannerTextCol}>
+            <Text style={styles.bannerHeading}>
+              {isEmergencyActive ? 'Emergency pass active' : passesLeft > 0 ? 'Emergency pass unlocked' : 'No passes left today'}
+            </Text>
+            <Text style={styles.bannerSubtext}>Take a deep breath and pause</Text>
+          </View>
+        </View>
+
+        {/* Primary Action Button (Electric Lime) */}
+        <TouchableOpacity style={styles.closeAppButton} onPress={onCloseApp} activeOpacity={0.85}>
+          <Text style={styles.closeAppButtonText}>Close app</Text>
+        </TouchableOpacity>
+
+        {/* Secondary Action Button (Dark Pill) */}
+        <TouchableOpacity
+          style={[styles.emergencyUseButton, passesLeft <= 0 && !isEmergencyActive && { opacity: 0.5 }]}
+          onPress={onEmergencyUse}
+          activeOpacity={0.85}
+          disabled={passesLeft <= 0 && !isEmergencyActive}
+        >
+          <Text style={styles.emergencyUseButtonText}>
+            ⏱ {isEmergencyActive ? `Emergency active (${emergencySecondsLeft}s)` : 'Emergency use (5 min)'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Remaining passes subtext */}
+        <Text style={styles.limitShieldRemainingSubtext}>
+          {passesLeft} left today
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// ── Overlay UI Customization Section ────────────────────────────────────
+
+interface OverlaySectionProps {
+  onApplyPreset: (preset: 'limitShield' | 'default' | 'minimal' | 'cyberpunk') => void;
+  onReset: () => void;
+  activePreset: string;
+}
+
+function OverlaySection({ onApplyPreset, onReset, activePreset }: OverlaySectionProps) {
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Native Overlay Customization</Text>
+      <Text style={styles.sectionSubtitle}>
+        Customize the native Android WindowManager blocking shield appearance without writing native code.
+      </Text>
+
+      <Text style={[styles.diagLabel, { marginBottom: 8 }]}>
+        Active Theme: <Text style={{ color: '#22C55E', fontWeight: '700' }}>{activePreset.toUpperCase()}</Text>
+      </Text>
+
+      <View style={styles.durationPresets}>
+        <TouchableOpacity
+          style={[styles.presetButton, activePreset === 'limitShield' && { backgroundColor: '#1E2532' }]}
+          onPress={() => onApplyPreset('limitShield')}
+        >
+          <Text style={styles.presetButtonText}>Limit Shield ⏳</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.presetButton, activePreset === 'default' && { backgroundColor: '#1E2532' }]}
+          onPress={() => onApplyPreset('default')}
+        >
+          <Text style={styles.presetButtonText}>Clean Dark</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.presetButton, activePreset === 'minimal' && { backgroundColor: '#1E2532' }]}
+          onPress={() => onApplyPreset('minimal')}
+        >
+          <Text style={styles.presetButtonText}>Calm Zen 🧘</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.presetButton, activePreset === 'cyberpunk' && { backgroundColor: '#1E2532' }]}
+          onPress={() => onApplyPreset('cyberpunk')}
+        >
+          <Text style={styles.presetButtonText}>Cyberpunk 🚀</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={{ marginTop: 10 }}>
+        <TouchableOpacity style={styles.secondaryActionBtn} onPress={onReset}>
+          <Text style={styles.secondaryActionText}>↺ Reset Overlay to Defaults</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+// ── Emergency Pass Section ──────────────────────────────────────────────
+
+interface EmergencySectionProps {
+  status: EmergencyPassStatus | null;
+  onEnable1mTest: () => void;
+  onActivatePass: () => void;
+  onCancelPass: () => void;
+  onResetPasses: () => void;
+  onGrantPass: () => void;
+}
+
+function EmergencySection({
+  status,
+  onEnable1mTest,
+  onActivatePass,
+  onCancelPass,
+  onResetPasses,
+  onGrantPass,
+}: EmergencySectionProps) {
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Emergency Pass / Grace Period</Text>
+      <Text style={styles.sectionSubtitle}>
+        Regulated temporary app access during blocks (daily limit + auto-reset at midnight + automatic re-block).
+      </Text>
+
+      {status ? (
+        <View style={styles.timerDisplayContainer}>
+          <Text style={styles.timerCountdown}>
+            {status.isPassActive ? `${status.remainingSeconds}s` : `${status.remainingPasses} / ${status.dailyLimit}`}
+          </Text>
+          <Text style={styles.timerLabel}>
+            {status.isPassActive
+              ? `⚡ Active Grace Period (${status.activePackage || 'Any App'})`
+              : status.isInCooldown
+              ? `⏳ Cooldown (${status.cooldownRemainingSeconds}s remaining)`
+              : `Passes Remaining Today (${status.durationMinutes}m each)`}
+          </Text>
+        </View>
+      ) : (
+        <Text style={styles.emptyText}>Loading emergency status...</Text>
+      )}
+
+      <View style={styles.durationPresets}>
+        <TouchableOpacity style={styles.presetButton} onPress={onEnable1mTest}>
+          <Text style={styles.presetButtonText}>⚙ 1m Test Config</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.presetButton, { backgroundColor: '#16A34A' }]}
+          onPress={onActivatePass}
+        >
+          <Text style={styles.presetButtonText}>▶ Trigger 1m Pass</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={[styles.sessionActionRow, { marginTop: 8 }]}>
+        <TouchableOpacity style={styles.pauseButton} onPress={onCancelPass}>
+          <Text style={styles.buttonText}>■ Cancel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.resumeButton, { backgroundColor: '#6366F1' }]} onPress={onGrantPass}>
+          <Text style={styles.buttonText}>+1 Bonus</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.resumeButton, { backgroundColor: '#64748B' }]} onPress={onResetPasses}>
+          <Text style={styles.buttonText}>↺ Reset</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 // ── Usage Data Section ──────────────────────────────────────────────────
 
 function formatDuration(ms: number): string {
@@ -545,6 +761,8 @@ export default function App() {
   const [loadingApps, setLoadingApps] = useState(false);
   const [sessionStatus, setSessionStatus] = useState<FocusSessionStatus | null>(null);
   const [vpnStatus, setVpnStatus] = useState<WebsiteBlockingStatus | null>(null);
+  const [emergencyStatus, setEmergencyStatus] = useState<EmergencyPassStatus | null>(null);
+  const [activeTheme, setActiveTheme] = useState<string>('limitShield');
 
   const refreshAll = useCallback(() => {
     try {
@@ -556,24 +774,41 @@ export default function App() {
       setSessionStatus(ses);
       const vpn = FocusControl.getWebsiteBlockingStatus();
       setVpnStatus(vpn);
+      const em = FocusControl.getEmergencyPassStatus();
+      setEmergencyStatus(em);
     } catch (e) {
       console.warn('Failed to refresh statuses:', e);
     }
   }, []);
 
-  // Live timer tick for active focus sessions
+  // Live timer tick for active focus sessions and emergency pass cooldown/active timers
   useEffect(() => {
-    if (!sessionStatus?.isActive || sessionStatus?.isPaused) return;
+    const shouldTick = (sessionStatus?.isActive && !sessionStatus?.isPaused) ||
+                       emergencyStatus?.isPassActive ||
+                       emergencyStatus?.isInCooldown;
+    if (!shouldTick) return;
+
     const interval = setInterval(() => {
       try {
-        const ses = FocusControl.getFocusSessionStatus();
-        setSessionStatus(ses);
+        if (sessionStatus?.isActive) {
+          const ses = FocusControl.getFocusSessionStatus();
+          setSessionStatus(ses);
+        }
+        if (emergencyStatus?.isPassActive || emergencyStatus?.isInCooldown) {
+          const em = FocusControl.getEmergencyPassStatus();
+          setEmergencyStatus(em);
+        }
       } catch (e) {
         // ignore
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [sessionStatus?.isActive, sessionStatus?.isPaused]);
+  }, [
+    sessionStatus?.isActive,
+    sessionStatus?.isPaused,
+    emergencyStatus?.isPassActive,
+    emergencyStatus?.isInCooldown
+  ]);
 
   const loadInstalledApps = useCallback(async () => {
     if (Platform.OS !== 'android') return;
@@ -676,6 +911,252 @@ export default function App() {
     }
   }, [refreshAll]);
 
+  // ── Overlay Customization Handlers ──
+  const handleApplyPreset = useCallback((preset: 'limitShield' | 'default' | 'minimal' | 'cyberpunk') => {
+    setActiveTheme(preset);
+    if (preset === 'limitShield') {
+      // Configure block-based layout with custom image asset for native WindowManager overlay
+      FocusControl.setOverlayLayout({
+        backgroundColor: '#0D1117',
+        paddingTop: 54,
+        paddingBottom: 36,
+        paddingHorizontal: 24,
+        cardMaxWidth: 380,
+        blocks: [
+          // Hero icon: circular crimson container with custom PNG hourglass asset + app badge
+          {
+            type: 'icon',
+            imageUri: HOURGLASS_ICON_BASE64,
+            iconSize: 48,
+            containerSize: 92,
+            containerColor: '#3B1824',
+            containerBorderColor: '#EF4444',
+            containerBorderWidth: 1,
+            badgeEmoji: '💬',
+            badgeSize: 28,
+            badgeBackgroundColor: '#1F2937',
+            alignSelf: 'center',
+          },
+          // Headline
+          {
+            type: 'text',
+            text: 'You’ve hit your limit',
+            fontSize: 24,
+            fontWeight: 'bold',
+            color: '#FFFFFF',
+            textAlign: 'center',
+            marginTop: 22,
+          },
+          // Subtitle with app name template variable
+          {
+            type: 'text',
+            text: "You've used {appName} for 30 of 30 minutes today.",
+            fontSize: 14,
+            color: '#94A3B8',
+            textAlign: 'center',
+            marginTop: 8,
+          },
+          // Card: Emergency pass status / mindful pause
+          {
+            type: 'card',
+            backgroundColor: '#161B24',
+            borderColor: '#232B3A',
+            borderWidth: 1,
+            borderRadius: 18,
+            padding: 16,
+            marginTop: 20,
+            children: [
+              {
+                type: 'row',
+                alignItems: 'center',
+                children: [
+                  {
+                    type: 'badge',
+                    text: '{remainingPasses}',
+                    backgroundColor: '#1E293B',
+                    textColor: '#10B981',
+                    borderRadius: 20,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                    marginRight: 12,
+                  },
+                  {
+                    type: 'card',
+                    backgroundColor: '#00000000',
+                    borderWidth: 0,
+                    padding: 0,
+                    flex: 1,
+                    children: [
+                      {
+                        type: 'text',
+                        text: 'Emergency pass unlocked',
+                        color: '#22C55E',
+                        fontSize: 14,
+                        fontWeight: 'bold',
+                        textAlign: 'left',
+                      },
+                      {
+                        type: 'text',
+                        text: 'Take a deep breath and pause',
+                        color: '#94A3B8',
+                        fontSize: 12,
+                        textAlign: 'left',
+                        marginTop: 2,
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          // Flexible vertical space pushing buttons down
+          {
+            type: 'spacer',
+            flex: 1,
+          },
+          // Primary Action: Lime green "Close app" button
+          {
+            type: 'button',
+            text: 'Close app',
+            action: 'close',
+            backgroundColor: '#D4FF32',
+            textColor: '#000000',
+            borderRadius: 28,
+            height: 54,
+            fontSize: 16,
+            fontWeight: 'bold',
+            marginBottom: 12,
+          },
+          // Secondary Action: Dark pill "Emergency use" button
+          {
+            type: 'button',
+            text: '⏱ Emergency use ({durationMinutes} min)',
+            action: 'emergency',
+            backgroundColor: '#1B222C',
+            textColor: '#F1F5F9',
+            borderRadius: 28,
+            height: 50,
+            fontSize: 14,
+            fontWeight: 'bold',
+            marginBottom: 10,
+          },
+          // Footer note
+          {
+            type: 'text',
+            text: '{remainingPasses} left today',
+            fontSize: 12,
+            color: '#64748B',
+            textAlign: 'center',
+          },
+        ],
+      });
+
+      FocusControl.setEmergencyPassConfig({
+        enabled: true,
+        durationMinutes: 5,
+        dailyLimit: 3,
+        showButtonOnOverlay: true,
+        buttonText: '⏱ Emergency use',
+        buttonColor: '#1B222C',
+        buttonTextColor: '#F1F5F9',
+        showRemainingCount: true,
+      });
+    } else {
+      // Reset block-based layout so standard config presets apply cleanly
+      FocusControl.resetOverlayLayout();
+
+      if (preset === 'default') {
+        FocusControl.setOverlayConfig({
+          title: 'Focus Mode Active',
+          message: 'This application is restricted during your scheduled focus time.',
+          titleColor: '#F8FAFC',
+          messageColor: '#94A3B8',
+          cardBackgroundColor: '#1E293B',
+          cardBorderColor: '#334155',
+          primaryButtonColor: '#2563EB',
+          showAppIcon: true,
+          cardAlignment: 'center',
+        });
+      } else if (preset === 'minimal') {
+        FocusControl.setOverlayConfig({
+          title: 'Mindful Moment',
+          message: 'Pause and take three deep breaths before proceeding.',
+          iconEmoji: '🧘‍♂️',
+          showAppIcon: false,
+          titleColor: '#10B981',
+          messageColor: '#6EE7B7',
+          cardBackgroundColor: '#064E3B',
+          cardBorderColor: '#059669',
+          cardCornerRadius: 32,
+          primaryButtonColor: '#059669',
+          primaryButtonText: 'Return to Calm',
+          cardAlignment: 'center',
+        });
+      } else if (preset === 'cyberpunk') {
+        FocusControl.setOverlayConfig({
+          title: 'ACCESS RESTRICTED // 403',
+          message: 'Protocol engaged. Firewall preventing unauthorized distractions.',
+          iconEmoji: '🚀',
+          showAppIcon: false,
+          titleColor: '#F43F5E',
+          titleSize: 22,
+          messageColor: '#FB7185',
+          cardBackgroundColor: '#18181B',
+          cardBorderColor: '#E11D48',
+          cardBorderWidth: 2,
+          cardCornerRadius: 12,
+          primaryButtonColor: '#E11D48',
+          primaryButtonText: 'DISCONNECT TARGET',
+          cardAlignment: 'center',
+        });
+      }
+    }
+  }, []);
+
+  const handleResetOverlay = useCallback(() => {
+    FocusControl.resetOverlayLayout();
+    FocusControl.resetOverlayConfig();
+    setActiveTheme('default');
+  }, []);
+
+  // ── Emergency Pass Handlers ──
+  const handleEnable1mTest = useCallback(() => {
+    FocusControl.setEmergencyPassConfig({
+      enabled: true,
+      durationMinutes: 1, // 1 minute for fast live testing
+      dailyLimit: 3,
+      cooldownMinutes: 0,
+      showButtonOnOverlay: true,
+      buttonText: 'Emergency Access',
+      buttonColor: '#334155',
+      buttonTextColor: '#F8FAFC',
+      showRemainingCount: true,
+    });
+    refreshAll();
+  }, [refreshAll]);
+
+  const handleActivateEmergencyPass = useCallback(() => {
+    FocusControl.activateEmergencyPass(undefined, 1);
+    refreshAll();
+  }, [refreshAll]);
+
+  const handleCancelEmergencyPass = useCallback(() => {
+    FocusControl.cancelEmergencyPass();
+    refreshAll();
+  }, [refreshAll]);
+
+  const handleResetEmergencyPasses = useCallback(() => {
+    FocusControl.resetEmergencyPasses();
+    refreshAll();
+  }, [refreshAll]);
+
+  const handleGrantBonusPass = useCallback(() => {
+    FocusControl.grantEmergencyPasses(1);
+    refreshAll();
+  }, [refreshAll]);
+
   const handleTogglePackage = useCallback((pkg: string) => {
     try {
       const current = blockingStatus?.blockedApplications ?? [];
@@ -721,6 +1202,7 @@ export default function App() {
     try {
       setPlatformInfo(FocusControl.getPlatformInfo());
       loadInstalledApps();
+      handleApplyPreset('limitShield');
       // Pre-configure initial test packages if empty
       const current = FocusControl.getAppBlockingStatus();
       if (!current.blockedApplications || current.blockedApplications.length === 0) {
@@ -788,6 +1270,39 @@ export default function App() {
           onToggleDomain={handleToggleDomain}
           onStartVpn={handleStartVpn}
           onStopVpn={handleStopVpn}
+        />
+
+        {/* Overlay UI Customization Tester */}
+        <OverlaySection
+          activePreset={activeTheme}
+          onApplyPreset={handleApplyPreset}
+          onReset={handleResetOverlay}
+        />
+
+        {/* Live Blocking Shield Preview (Matching Reference Design) */}
+        <LimitShieldPreview
+          appName={blockingStatus?.blockedApplications?.[0]?.split('.').pop()?.toUpperCase() || 'REDDIT'}
+          passesLeft={emergencyStatus?.remainingPasses ?? 3}
+          isEmergencyActive={emergencyStatus?.isPassActive ?? false}
+          emergencySecondsLeft={emergencyStatus?.remainingSeconds ?? 0}
+          onCloseApp={() => {
+            FocusControl.stopAppBlocking();
+            refreshAll();
+          }}
+          onEmergencyUse={() => {
+            FocusControl.activateEmergencyPass(undefined, 5);
+            refreshAll();
+          }}
+        />
+
+        {/* Emergency Pass Tester */}
+        <EmergencySection
+          status={emergencyStatus}
+          onEnable1mTest={handleEnable1mTest}
+          onActivatePass={handleActivateEmergencyPass}
+          onCancelPass={handleCancelEmergencyPass}
+          onResetPasses={handleResetEmergencyPasses}
+          onGrantPass={handleGrantBonusPass}
         />
 
         {/* Permission Dashboard */}
@@ -1293,5 +1808,176 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
+  },
+  secondaryActionBtn: {
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  secondaryActionText: {
+    color: '#475569',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  previewBadge: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#D4FF32',
+    letterSpacing: 1.2,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  limitShieldContainer: {
+    backgroundColor: '#090D14',
+    borderRadius: 24,
+    padding: 20,
+    marginVertical: 14,
+    borderWidth: 1.5,
+    borderColor: '#1E2532',
+  },
+  limitShieldCard: {
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  heroIconWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  heroOuterCircle: {
+    width: 94,
+    height: 94,
+    borderRadius: 47,
+    backgroundColor: '#26151D',
+    borderWidth: 1.5,
+    borderColor: '#FF4D6D',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroHourglass: {
+    fontSize: 40,
+  },
+  heroHourglassImage: {
+    width: 44,
+    height: 44,
+  },
+  heroAppBadge: {
+    position: 'absolute',
+    bottom: -6,
+    backgroundColor: '#1E2430',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#334155',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  heroAppBadgeText: {
+    fontSize: 16,
+  },
+  limitShieldTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    letterSpacing: -0.5,
+    marginBottom: 8,
+  },
+  limitShieldSubtitle: {
+    fontSize: 15,
+    color: '#94A3B8',
+    textAlign: 'center',
+    lineHeight: 22,
+    paddingHorizontal: 16,
+    marginBottom: 22,
+  },
+  limitShieldAppHighlight: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  limitShieldBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#161B26',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#232B3A',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    width: '100%',
+    marginBottom: 24,
+  },
+  bannerIndicatorCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#0F131A',
+    borderWidth: 1.5,
+    borderColor: '#22C55E',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  bannerIndicatorText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#22C55E',
+  },
+  bannerTextCol: {
+    flex: 1,
+  },
+  bannerHeading: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#22C55E',
+    marginBottom: 2,
+  },
+  bannerSubtext: {
+    fontSize: 13,
+    color: '#8B949E',
+  },
+  closeAppButton: {
+    backgroundColor: '#D4FF32',
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  closeAppButtonText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+  },
+  emergencyUseButton: {
+    backgroundColor: '#1B222C',
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#2A3444',
+    marginBottom: 10,
+  },
+  emergencyUseButtonText: {
+    color: '#F1F5F9',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  limitShieldRemainingSubtext: {
+    fontSize: 13,
+    color: '#6E7681',
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });

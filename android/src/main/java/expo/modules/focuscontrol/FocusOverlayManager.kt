@@ -4,28 +4,36 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.util.Base64
 import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import java.io.File
 
 /**
  * Thread-safe singleton managing the native WindowManager blocking overlay.
  * Uses TYPE_ACCESSIBILITY_OVERLAY when called from AccessibilityService (bypassing
  * OEM background overlay locks like Xiaomi's 'Display pop-up windows in background'),
  * with TYPE_APPLICATION_OVERLAY fallback.
+ *
+ * Fully supports runtime UI customization via OverlayConfig.
  */
 object FocusOverlayManager {
   private const val TAG = "FocusOverlayManager"
@@ -58,13 +66,11 @@ object FocusOverlayManager {
 
     mainHandler.post {
       try {
-        // If overlay is already attached for the same package, do nothing
         if (currentOverlayView != null && currentlyDisplayedPackage == blockedPackage) {
           Log.d(TAG, "Overlay already displayed for $blockedPackage, skipping addView")
           return@post
         }
 
-        // If overlay is already attached for a different package, dismiss first
         if (currentOverlayView != null) {
           dismissOverlayInternal("package_switch")
         }
@@ -76,11 +82,10 @@ object FocusOverlayManager {
         }
         activeWindowManager = wm
 
-        val overlayView = buildOverlayView(targetContext, blockedPackage)
+        // Load custom or default overlay configuration
+        val config = OverlayConfig.load(targetContext)
+        val overlayView = buildOverlayView(targetContext, blockedPackage, config)
 
-        // Select window type:
-        // When attached through AccessibilityService, TYPE_ACCESSIBILITY_OVERLAY is granted by OS
-        // and bypasses Xiaomi's background popup restriction (MIUIOP 10021).
         val windowType = if (a11yInstance != null) {
           WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -136,8 +141,18 @@ object FocusOverlayManager {
   }
 
   @SuppressLint("SetTextI18n")
-  private fun buildOverlayView(context: Context, blockedPackage: String): View {
+  private fun buildOverlayView(context: Context, blockedPackage: String, config: OverlayConfig): View {
+    // Check if a block-based custom layout is configured
+    val customLayoutJson = OverlayLayoutConfig.load(context)
+    if (!customLayoutJson.isNullOrBlank()) {
+      val customView = OverlayLayoutRenderer.render(context, customLayoutJson, blockedPackage)
+      if (customView != null) {
+        return customView
+      }
+    }
+
     val pm = context.packageManager
+    var appIconDrawable: android.graphics.drawable.Drawable? = null
     val appName = try {
       val appInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         pm.getApplicationInfo(blockedPackage, PackageManager.ApplicationInfoFlags.of(0))
@@ -145,133 +160,270 @@ object FocusOverlayManager {
         @Suppress("DEPRECATION")
         pm.getApplicationInfo(blockedPackage, 0)
       }
+      appIconDrawable = pm.getApplicationIcon(appInfo)
       pm.getApplicationLabel(appInfo).toString()
     } catch (e: Exception) {
       blockedPackage
     }
 
-    // Root Container
+    // 1. Root Container
     val root = FrameLayout(context).apply {
-      setBackgroundColor(Color.parseColor("#EE0F172A")) // 93% opaque dark slate
+      val bg = OverlayConfig.parseColorSafe(config.backgroundColor, Color.parseColor("#EE0F172A"))
+      setBackgroundColor(bg)
       isClickable = true
       isFocusable = true
     }
 
-    // Centered Content Card
+    // 2. Centered Content Card
     val content = LinearLayout(context).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_HORIZONTAL
-      setPadding(dpToPx(context, 28), dpToPx(context, 36), dpToPx(context, 28), dpToPx(context, 36))
+      setPadding(dpToPx(context, 26), dpToPx(context, 32), dpToPx(context, 26), dpToPx(context, 32))
+
+      val cardBg = OverlayConfig.parseColorSafe(config.cardBackgroundColor, Color.parseColor("#1E293B"))
+      val cardBorder = OverlayConfig.parseColorSafe(config.cardBorderColor, Color.parseColor("#334155"))
 
       background = GradientDrawable().apply {
-        setColor(Color.parseColor("#1E293B")) // Slate 800
-        cornerRadius = dpToPx(context, 20).toFloat()
-        setStroke(dpToPx(context, 1), Color.parseColor("#334155"))
+        setColor(cardBg)
+        cornerRadius = dpToPx(context, config.cardCornerRadius).toFloat()
+        setStroke(dpToPx(context, config.cardBorderWidth), cardBorder)
       }
+    }
+
+    val verticalGravity = when (config.cardAlignment.lowercase()) {
+      "top" -> Gravity.TOP
+      "bottom" -> Gravity.BOTTOM
+      else -> Gravity.CENTER_VERTICAL
     }
 
     val cardParams = FrameLayout.LayoutParams(
-      dpToPx(context, 320),
+      dpToPx(context, config.cardMaxWidth),
       FrameLayout.LayoutParams.WRAP_CONTENT
     ).apply {
-      gravity = Gravity.CENTER
-    }
-
-    // Icon Circle / Emoji
-    val iconView = TextView(context).apply {
-      text = "🛡️"
-      textSize = 44f
-      gravity = Gravity.CENTER
-      setPadding(0, 0, 0, dpToPx(context, 12))
-    }
-    content.addView(iconView)
-
-    // Title
-    val titleView = TextView(context).apply {
-      text = "Focus Mode Active"
-      textSize = 22f
-      typeface = Typeface.DEFAULT_BOLD
-      setTextColor(Color.parseColor("#F8FAFC"))
-      gravity = Gravity.CENTER
-    }
-    content.addView(titleView)
-
-    // Blocked App Name Label
-    val appBadge = TextView(context).apply {
-      text = "$appName is blocked"
-      textSize = 15f
-      typeface = Typeface.DEFAULT_BOLD
-      setTextColor(Color.parseColor("#F87171")) // Red 400
-      gravity = Gravity.CENTER
-      setPadding(0, dpToPx(context, 8), 0, dpToPx(context, 8))
-    }
-    content.addView(appBadge)
-
-    // Description
-    val descView = TextView(context).apply {
-      text = "Stay committed to your focus session. This app will be unblocked once your session ends."
-      textSize = 13f
-      setTextColor(Color.parseColor("#94A3B8")) // Slate 400
-      gravity = Gravity.CENTER
-      setLineSpacing(dpToPx(context, 2).toFloat(), 1.15f)
-      setPadding(0, 0, 0, dpToPx(context, 24))
-    }
-    content.addView(descView)
-
-    // Primary Action Button: "Return to Focus"
-    val returnButton = Button(context).apply {
-      text = "Return to Focus"
-      textSize = 14f
-      typeface = Typeface.DEFAULT_BOLD
-      setTextColor(Color.WHITE)
-      background = GradientDrawable().apply {
-        setColor(Color.parseColor("#2563EB")) // Blue 600
-        cornerRadius = dpToPx(context, 10).toFloat()
+      gravity = Gravity.CENTER_HORIZONTAL or verticalGravity
+      if (verticalGravity == Gravity.TOP) {
+        topMargin = dpToPx(context, 80)
+      } else if (verticalGravity == Gravity.BOTTOM) {
+        bottomMargin = dpToPx(context, 60)
       }
-      setPadding(dpToPx(context, 16), dpToPx(context, 12), dpToPx(context, 16), dpToPx(context, 12))
+    }
 
-      setOnClickListener {
-        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-        if (launchIntent != null) {
-          launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-          context.startActivity(launchIntent)
+    // 3. Custom Image Icon (PNG / JPEG / WebP / Base64), Real App Icon, or Emoji
+    var customBitmap: Bitmap? = null
+    if (config.customIconUri.isNotBlank()) {
+      try {
+        val uriStr = config.customIconUri.trim()
+        if (uriStr.startsWith("data:image") && uriStr.contains("base64,")) {
+          val base64Data = uriStr.substringAfter("base64,")
+          val bytes = Base64.decode(base64Data, Base64.DEFAULT)
+          customBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        } else if (uriStr.startsWith("content://") || uriStr.startsWith("file://")) {
+          val uri = Uri.parse(uriStr)
+          context.contentResolver.openInputStream(uri)?.use { stream ->
+            customBitmap = BitmapFactory.decodeStream(stream)
+          }
         } else {
+          val file = File(uriStr)
+          if (file.exists()) {
+            customBitmap = BitmapFactory.decodeFile(file.absolutePath)
+          }
+        }
+      } catch (e: Exception) {
+        Log.w(TAG, "Failed to load customIconUri: ${e.message}")
+      }
+    }
+
+    if (customBitmap != null) {
+      val iconPx = dpToPx(context, config.iconSize.toInt().coerceAtLeast(32))
+      val iconView = ImageView(context).apply {
+        setImageBitmap(customBitmap)
+        scaleType = ImageView.ScaleType.FIT_CENTER
+        layoutParams = LinearLayout.LayoutParams(iconPx, iconPx).apply {
+          gravity = Gravity.CENTER_HORIZONTAL
+          bottomMargin = dpToPx(context, 12)
+        }
+      }
+      content.addView(iconView)
+    } else if (config.showAppIcon && appIconDrawable != null) {
+      val iconView = ImageView(context).apply {
+        setImageDrawable(appIconDrawable)
+        val iconPx = dpToPx(context, 56)
+        layoutParams = LinearLayout.LayoutParams(iconPx, iconPx).apply {
+          gravity = Gravity.CENTER_HORIZONTAL
+          bottomMargin = dpToPx(context, 12)
+        }
+      }
+      content.addView(iconView)
+    } else if (config.iconEmoji.isNotBlank()) {
+      // 3b. Emoji Icon
+      val emojiView = TextView(context).apply {
+        text = config.iconEmoji
+        textSize = config.iconSize
+        gravity = Gravity.CENTER
+        setPadding(0, 0, 0, dpToPx(context, 10))
+      }
+      content.addView(emojiView)
+    }
+
+    // 4. Custom Title
+    if (config.title.isNotBlank()) {
+      val titleView = TextView(context).apply {
+        text = config.title
+        textSize = config.titleSize
+        typeface = Typeface.DEFAULT_BOLD
+        setTextColor(OverlayConfig.parseColorSafe(config.titleColor, Color.parseColor("#F8FAFC")))
+        gravity = Gravity.CENTER
+      }
+      content.addView(titleView)
+    }
+
+    // 5. Blocked App Name Badge
+    if (config.showBlockedAppName) {
+      val badgeText = config.blockedAppFormat.replace("{appName}", appName)
+      val appBadge = TextView(context).apply {
+        text = badgeText
+        textSize = config.badgeTextSize
+        typeface = Typeface.DEFAULT_BOLD
+        setTextColor(OverlayConfig.parseColorSafe(config.badgeTextColor, Color.parseColor("#F87171")))
+        gravity = Gravity.CENTER
+        setPadding(0, dpToPx(context, 6), 0, dpToPx(context, 6))
+      }
+      content.addView(appBadge)
+    }
+
+    // 6. Custom Description / Message
+    if (config.message.isNotBlank()) {
+      val descView = TextView(context).apply {
+        text = config.message
+        textSize = config.messageSize
+        setTextColor(OverlayConfig.parseColorSafe(config.messageColor, Color.parseColor("#94A3B8")))
+        gravity = Gravity.CENTER
+        setLineSpacing(dpToPx(context, 2).toFloat(), 1.15f)
+        setPadding(0, dpToPx(context, 4), 0, dpToPx(context, 20))
+      }
+      content.addView(descView)
+    }
+
+    // 7. Primary Action Button (Return to Focus)
+    if (config.showPrimaryButton) {
+      val primaryBtn = Button(context).apply {
+        text = config.primaryButtonText
+        textSize = 14f
+        typeface = Typeface.DEFAULT_BOLD
+        setTextColor(OverlayConfig.parseColorSafe(config.primaryButtonTextColor, Color.WHITE))
+
+        val btnColor = OverlayConfig.parseColorSafe(config.primaryButtonColor, Color.parseColor("#2563EB"))
+        background = GradientDrawable().apply {
+          setColor(btnColor)
+          cornerRadius = dpToPx(context, 10).toFloat()
+        }
+        setPadding(dpToPx(context, 16), dpToPx(context, 12), dpToPx(context, 16), dpToPx(context, 12))
+
+        setOnClickListener {
+          val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+          if (launchIntent != null) {
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            context.startActivity(launchIntent)
+          } else {
+            val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+              addCategory(Intent.CATEGORY_HOME)
+              addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(homeIntent)
+          }
+          dismissOverlayInternal("primary_action_clicked")
+        }
+      }
+      content.addView(primaryBtn, LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        dpToPx(context, 48)
+      ))
+    }
+
+    // 8. Emergency Pass Button (if enabled)
+    val emergencyConfig = EmergencyPassConfig.load(context)
+    if (emergencyConfig.enabled && emergencyConfig.showButtonOnOverlay) {
+      val status = EmergencyPassManager.getStatus(context, blockedPackage)
+      val remaining = status["remainingPasses"] as? Int ?: 0
+      val isInCooldown = status["isInCooldown"] as? Boolean ?: false
+      val cooldownRemainingSeconds = status["cooldownRemainingSeconds"] as? Long ?: 0L
+
+      if (isInCooldown) {
+        val cooldownMins = (cooldownRemainingSeconds / 60) + 1
+        val cooldownBadge = TextView(context).apply {
+          text = "Emergency pass cooldown: ${cooldownMins}m remaining"
+          textSize = 12f
+          setTextColor(Color.parseColor("#94A3B8"))
+          gravity = Gravity.CENTER
+          setPadding(0, dpToPx(context, 8), 0, dpToPx(context, 4))
+        }
+        content.addView(cooldownBadge)
+      } else if (remaining > 0) {
+        val emergencyBtn = Button(context).apply {
+          val labelBuilder = StringBuilder(emergencyConfig.buttonText)
+          labelBuilder.append(" (${emergencyConfig.durationMinutes}m)")
+          if (emergencyConfig.showRemainingCount) {
+            labelBuilder.append(" · $remaining left")
+          }
+          text = labelBuilder.toString()
+          textSize = 13f
+          typeface = Typeface.DEFAULT_BOLD
+          setTextColor(EmergencyPassConfig.parseColorSafe(emergencyConfig.buttonTextColor, Color.parseColor("#F8FAFC")))
+
+          val btnBg = EmergencyPassConfig.parseColorSafe(emergencyConfig.buttonColor, Color.parseColor("#334155"))
+          background = GradientDrawable().apply {
+            setColor(btnBg)
+            cornerRadius = dpToPx(context, 8).toFloat()
+          }
+          setPadding(dpToPx(context, 12), dpToPx(context, 8), dpToPx(context, 12), dpToPx(context, 8))
+
+          setOnClickListener {
+            EmergencyPassManager.activateEmergencyPass(context, blockedPackage)
+          }
+        }
+        val emergencyParams = LinearLayout.LayoutParams(
+          LinearLayout.LayoutParams.MATCH_PARENT,
+          dpToPx(context, 42)
+        ).apply {
+          topMargin = dpToPx(context, 8)
+        }
+        content.addView(emergencyBtn, emergencyParams)
+      } else {
+        val exhaustedBadge = TextView(context).apply {
+          text = "No emergency passes remaining today"
+          textSize = 12f
+          setTextColor(Color.parseColor("#EF4444"))
+          gravity = Gravity.CENTER
+          setPadding(0, dpToPx(context, 8), 0, dpToPx(context, 4))
+        }
+        content.addView(exhaustedBadge)
+      }
+    }
+
+    // 9. Secondary Action Button (Exit to Home)
+    if (config.showSecondaryButton) {
+      val secondaryBtn = Button(context).apply {
+        text = config.secondaryButtonText
+        textSize = 13f
+        setTextColor(OverlayConfig.parseColorSafe(config.secondaryButtonTextColor, Color.parseColor("#94A3B8")))
+        setBackgroundColor(Color.TRANSPARENT)
+        setOnClickListener {
           val homeIntent = Intent(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_HOME)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
           }
           context.startActivity(homeIntent)
+          dismissOverlayInternal("secondary_action_clicked")
         }
-        dismissOverlayInternal("return_to_focus_clicked")
       }
-    }
-    content.addView(returnButton, LinearLayout.LayoutParams(
-      LinearLayout.LayoutParams.MATCH_PARENT,
-      dpToPx(context, 48)
-    ))
-
-    // Secondary Action Button: "Exit to Home"
-    val homeButton = Button(context).apply {
-      text = "Exit to Home Screen"
-      textSize = 13f
-      setTextColor(Color.parseColor("#94A3B8"))
-      setBackgroundColor(Color.TRANSPARENT)
-      setOnClickListener {
-        val homeIntent = Intent(Intent.ACTION_MAIN).apply {
-          addCategory(Intent.CATEGORY_HOME)
-          addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(homeIntent)
-        dismissOverlayInternal("exit_to_home_clicked")
+      val homeBtnParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        dpToPx(context, 40)
+      ).apply {
+        topMargin = dpToPx(context, 6)
       }
+      content.addView(secondaryBtn, homeBtnParams)
     }
-    val homeBtnParams = LinearLayout.LayoutParams(
-      LinearLayout.LayoutParams.MATCH_PARENT,
-      dpToPx(context, 40)
-    ).apply {
-      topMargin = dpToPx(context, 6)
-    }
-    content.addView(homeButton, homeBtnParams)
 
     root.addView(content, cardParams)
     return root

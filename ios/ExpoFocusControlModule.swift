@@ -202,6 +202,83 @@ public class ExpoFocusControlModule: Module {
       return []
     }
 
+    // ── Overlay UI Customization Stubs ─────────────────────────────────
+
+    Function("setOverlayConfig") { (config: [String: Any]) in
+      // Overlay UI is Android-specific (WindowManager / Accessibility)
+    }
+
+    Function("getOverlayConfig") { () -> [String: Any] in
+      return [:]
+    }
+
+    Function("resetOverlayConfig") { () in
+      // Overlay UI is Android-specific
+    }
+
+    Function("setOverlayLayout") { (layoutJson: String) in
+      // Overlay UI is Android-specific
+    }
+
+    Function("getOverlayLayout") { () -> String? in
+      return nil
+    }
+
+    Function("resetOverlayLayout") { () in
+      // Overlay UI is Android-specific
+    }
+
+    // ── Emergency Pass Stubs ───────────────────────────────────────────
+
+    Function("setEmergencyPassConfig") { (config: [String: Any]) in
+      // Android-specific
+    }
+
+    Function("getEmergencyPassConfig") { () -> [String: Any] in
+      return [:]
+    }
+
+    Function("resetEmergencyPassConfig") { () in
+      // Android-specific
+    }
+
+    Function("getEmergencyPassStatus") { (packageName: String?) -> [String: Any] in
+      return [
+        "enabled": false,
+        "dailyLimit": 3,
+        "remainingPasses": 3,
+        "usedPassesToday": 0,
+        "durationMinutes": 5,
+        "isPassActive": false,
+        "activePackage": NSNull(),
+        "expiresAt": NSNull(),
+        "remainingSeconds": 0,
+        "isInCooldown": false,
+        "cooldownUntil": NSNull(),
+        "cooldownRemainingSeconds": 0
+      ]
+    }
+
+    Function("activateEmergencyPass") { (packageName: String?, customMinutes: Int?) -> [String: Any] in
+      return [
+        "success": false,
+        "error": "UNSUPPORTED_PLATFORM",
+        "message": "Emergency pass is not supported on iOS"
+      ]
+    }
+
+    Function("cancelEmergencyPass") { () in
+      // Android-specific
+    }
+
+    Function("resetEmergencyPasses") { () in
+      // Android-specific
+    }
+
+    Function("grantEmergencyPasses") { (count: Int) in
+      // Android-specific
+    }
+
     // ── Platform Info ───────────────────────────────────────────────────
 
     Function("getPlatformInfo") { () -> [String: Any] in

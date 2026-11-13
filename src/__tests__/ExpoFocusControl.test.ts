@@ -131,6 +131,58 @@ jest.mock('../ExpoFocusControlModule', () => ({
       platform: 'android',
       sdkVersion: 34,
     })),
+    setOverlayConfig: jest.fn(),
+    getOverlayConfig: jest.fn(() => ({
+      title: 'Focus Mode Active',
+      message: 'This app is blocked.',
+      iconEmoji: '🛡️',
+      cardAlignment: 'center',
+    })),
+    resetOverlayConfig: jest.fn(),
+    setOverlayLayout: jest.fn(),
+    getOverlayLayout: jest.fn(() => JSON.stringify({
+      backgroundColor: '#0D1117',
+      blocks: [
+        { type: 'text', text: 'Custom Layout Active' },
+        { type: 'button', text: 'Close', action: 'close' }
+      ]
+    })),
+    resetOverlayLayout: jest.fn(),
+    // Emergency Pass mocks
+    setEmergencyPassConfig: jest.fn(),
+    getEmergencyPassConfig: jest.fn(() => ({
+      enabled: true,
+      durationMinutes: 5,
+      dailyLimit: 3,
+      cooldownMinutes: 10,
+      showButtonOnOverlay: true,
+      buttonText: 'Emergency Access',
+    })),
+    resetEmergencyPassConfig: jest.fn(),
+    getEmergencyPassStatus: jest.fn((pkg?: string) => ({
+      enabled: true,
+      dailyLimit: 3,
+      remainingPasses: 2,
+      usedPassesToday: 1,
+      durationMinutes: 5,
+      isPassActive: pkg === 'com.instagram.android',
+      activePackage: pkg === 'com.instagram.android' ? 'com.instagram.android' : null,
+      expiresAt: pkg === 'com.instagram.android' ? Date.now() + 300000 : null,
+      remainingSeconds: pkg === 'com.instagram.android' ? 300 : 0,
+      isInCooldown: false,
+      cooldownUntil: null,
+      cooldownRemainingSeconds: 0,
+    })),
+    activateEmergencyPass: jest.fn((pkg?: string, minutes?: number) => ({
+      success: true,
+      remainingPasses: 1,
+      durationMinutes: minutes ?? 5,
+      expiresAt: Date.now() + (minutes ?? 5) * 60000,
+      activePackage: pkg ?? null,
+    })),
+    cancelEmergencyPass: jest.fn(),
+    resetEmergencyPasses: jest.fn(),
+    grantEmergencyPasses: jest.fn(),
     addListener: jest.fn(),
     removeListeners: jest.fn(),
   },
@@ -366,6 +418,138 @@ describe('ExpoFocusControl Public API', () => {
         platform: 'android',
         sdkVersion: 34,
       });
+    });
+  });
+
+  describe('Overlay UI Customization', () => {
+    it('sets overlay configuration', () => {
+      const customConfig: FocusControl.OverlayConfig = {
+        title: 'Deep Work In Progress',
+        message: 'Stay focused on your goals!',
+        iconEmoji: '🚀',
+        customIconUri: 'file:///path/to/custom_icon.png',
+        titleColor: '#FF5722',
+        titleSize: 26,
+        cardAlignment: 'center',
+        primaryButtonText: 'Return to Work',
+        showSecondaryButton: false,
+      };
+
+      FocusControl.setOverlayConfig(customConfig);
+      expect(ExpoFocusControlModule.setOverlayConfig).toHaveBeenCalledWith(customConfig);
+    });
+
+    it('gets current overlay configuration', () => {
+      const config = FocusControl.getOverlayConfig();
+      expect(ExpoFocusControlModule.getOverlayConfig).toHaveBeenCalled();
+      expect(config.title).toBe('Focus Mode Active');
+      expect(config.iconEmoji).toBe('🛡️');
+      expect(config.cardAlignment).toBe('center');
+    });
+
+    it('resets overlay configuration', () => {
+      FocusControl.resetOverlayConfig();
+      expect(ExpoFocusControlModule.resetOverlayConfig).toHaveBeenCalled();
+    });
+  });
+
+  describe('Block-Based Overlay Layout API', () => {
+    it('sets block-based overlay layout object', () => {
+      const layout: FocusControl.OverlayLayoutConfig = {
+        backgroundColor: '#0D1117',
+        blocks: [
+          { type: 'icon', emoji: '⏳', containerSize: 96, containerColor: '#3B1824' },
+          { type: 'text', text: 'You’ve hit your limit', fontSize: 24, fontWeight: 'bold' },
+          { type: 'text', text: "You've used {appName} for 30 minutes.", color: '#94A3B8' },
+          { type: 'spacer', flex: 1 },
+          { type: 'button', text: 'Close app', action: 'close', backgroundColor: '#D4FF32', textColor: '#000000' },
+          { type: 'button', text: 'Emergency use ({durationMinutes}m)', action: 'emergency' },
+          { type: 'text', text: '{remainingPasses} left today', fontSize: 12 },
+        ],
+      };
+
+      FocusControl.setOverlayLayout(layout);
+      expect(ExpoFocusControlModule.setOverlayLayout).toHaveBeenCalledWith(JSON.stringify(layout));
+    });
+
+    it('sets block-based overlay layout from raw JSON string', () => {
+      const jsonStr = '{"backgroundColor":"#000000","blocks":[]}';
+      FocusControl.setOverlayLayout(jsonStr);
+      expect(ExpoFocusControlModule.setOverlayLayout).toHaveBeenCalledWith(jsonStr);
+    });
+
+    it('gets current block-based overlay layout', () => {
+      const layout = FocusControl.getOverlayLayout();
+      expect(ExpoFocusControlModule.getOverlayLayout).toHaveBeenCalled();
+      expect(layout).not.toBeNull();
+      expect(layout?.backgroundColor).toBe('#0D1117');
+      expect(layout?.blocks).toHaveLength(2);
+    });
+
+    it('resets block-based overlay layout', () => {
+      FocusControl.resetOverlayLayout();
+      expect(ExpoFocusControlModule.resetOverlayLayout).toHaveBeenCalled();
+    });
+  });
+
+  describe('Emergency Pass API', () => {
+    it('sets emergency pass configuration', () => {
+      const config: FocusControl.EmergencyPassConfig = {
+        enabled: true,
+        durationMinutes: 10,
+        dailyLimit: 5,
+        cooldownMinutes: 15,
+        showButtonOnOverlay: true,
+        buttonText: 'Emergency Unlock',
+      };
+
+      FocusControl.setEmergencyPassConfig(config);
+      expect(ExpoFocusControlModule.setEmergencyPassConfig).toHaveBeenCalledWith(config);
+    });
+
+    it('gets current emergency pass configuration', () => {
+      const config = FocusControl.getEmergencyPassConfig();
+      expect(ExpoFocusControlModule.getEmergencyPassConfig).toHaveBeenCalled();
+      expect(config.enabled).toBe(true);
+      expect(config.durationMinutes).toBe(5);
+      expect(config.dailyLimit).toBe(3);
+    });
+
+    it('resets emergency pass configuration', () => {
+      FocusControl.resetEmergencyPassConfig();
+      expect(ExpoFocusControlModule.resetEmergencyPassConfig).toHaveBeenCalled();
+    });
+
+    it('queries emergency pass status', () => {
+      const status = FocusControl.getEmergencyPassStatus('com.instagram.android');
+      expect(ExpoFocusControlModule.getEmergencyPassStatus).toHaveBeenCalledWith('com.instagram.android');
+      expect(status.enabled).toBe(true);
+      expect(status.remainingPasses).toBe(2);
+      expect(status.isPassActive).toBe(true);
+      expect(status.activePackage).toBe('com.instagram.android');
+    });
+
+    it('activates emergency pass programmatically', () => {
+      const result = FocusControl.activateEmergencyPass('com.instagram.android', 8);
+      expect(ExpoFocusControlModule.activateEmergencyPass).toHaveBeenCalledWith('com.instagram.android', 8);
+      expect(result.success).toBe(true);
+      expect(result.remainingPasses).toBe(1);
+      expect(result.durationMinutes).toBe(8);
+    });
+
+    it('cancels emergency pass early', () => {
+      FocusControl.cancelEmergencyPass();
+      expect(ExpoFocusControlModule.cancelEmergencyPass).toHaveBeenCalled();
+    });
+
+    it('resets emergency passes to daily limit', () => {
+      FocusControl.resetEmergencyPasses();
+      expect(ExpoFocusControlModule.resetEmergencyPasses).toHaveBeenCalled();
+    });
+
+    it('grants bonus emergency passes', () => {
+      FocusControl.grantEmergencyPasses(2);
+      expect(ExpoFocusControlModule.grantEmergencyPasses).toHaveBeenCalledWith(2);
     });
   });
 });

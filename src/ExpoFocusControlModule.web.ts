@@ -1,6 +1,16 @@
 import { registerWebModule, NativeModule } from 'expo';
 
-import { AppBlockingStatus, BatteryDiagnostics, ExpoFocusControlModuleEvents, FocusSessionStatus, WebsiteBlockingStatus } from './ExpoFocusControl.types';
+import {
+  AppBlockingStatus,
+  BatteryDiagnostics,
+  EmergencyPassActivationResult,
+  EmergencyPassConfig,
+  EmergencyPassStatus,
+  ExpoFocusControlModuleEvents,
+  FocusSessionStatus,
+  OverlayConfig,
+  WebsiteBlockingStatus,
+} from './ExpoFocusControl.types';
 
 class ExpoFocusControlModule extends NativeModule<ExpoFocusControlModuleEvents> {
   getPermissionStatuses() {
@@ -57,6 +67,39 @@ class ExpoFocusControlModule extends NativeModule<ExpoFocusControlModuleEvents> 
   async getInstalledApplications(_includeSystemApps: boolean = false) {
     return [];
   }
+  setOverlayConfig(_config: OverlayConfig) {}
+  getOverlayConfig(): OverlayConfig { return {}; }
+  resetOverlayConfig() {}
+  setOverlayLayout(_layoutJson: string) {}
+  getOverlayLayout(): string | null { return null; }
+  resetOverlayLayout() {}
+
+  // Emergency Pass stubs
+  setEmergencyPassConfig(_config: EmergencyPassConfig) {}
+  getEmergencyPassConfig(): EmergencyPassConfig { return {}; }
+  resetEmergencyPassConfig() {}
+  getEmergencyPassStatus(_packageName?: string): EmergencyPassStatus {
+    return {
+      enabled: false,
+      dailyLimit: 3,
+      remainingPasses: 3,
+      usedPassesToday: 0,
+      durationMinutes: 5,
+      isPassActive: false,
+      activePackage: null,
+      expiresAt: null,
+      remainingSeconds: 0,
+      isInCooldown: false,
+      cooldownUntil: null,
+      cooldownRemainingSeconds: 0,
+    };
+  }
+  activateEmergencyPass(_packageName?: string, _customMinutes?: number): EmergencyPassActivationResult {
+    return { success: false, error: 'UNSUPPORTED_PLATFORM', message: 'Emergency pass is not supported on web.' };
+  }
+  cancelEmergencyPass() {}
+  resetEmergencyPasses() {}
+  grantEmergencyPasses(_count: number) {}
 
   // Focus Session & Website Blocking stubs
   startFocusSession(durationSeconds: number, sessionName?: string, enableAppBlocking?: boolean): FocusSessionStatus {

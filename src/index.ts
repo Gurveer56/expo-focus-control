@@ -6,10 +6,16 @@ import type {
   AccessibilityStatus,
   AppBlockingStatus,
   BatteryDiagnostics,
+  EmergencyPassActivationResult,
+  EmergencyPassConfig,
+  EmergencyPassStatus,
   FocusSessionOptions,
   FocusSessionStatus,
   InstalledApp,
   InstalledAppsOptions,
+  OverlayBlock,
+  OverlayConfig,
+  OverlayLayoutConfig,
   PermissionStatus,
   PermissionStatuses,
   UsageQueryOptions,
@@ -315,4 +321,127 @@ export function getPlatformInfo(): { platform: string; sdkVersion: number } {
     platform: raw.platform as string,
     sdkVersion: raw.sdkVersion as number,
   };
+}
+
+// ── Overlay UI Customization API ─────────────────────────────────────────
+
+/**
+ * Configure the visual appearance and behavior of the native blocking overlay shield.
+ * Settings persist across sessions and device reboots.
+ */
+export function setOverlayConfig(config: OverlayConfig): void {
+  ExpoFocusControlModule.setOverlayConfig(config);
+}
+
+/**
+ * Get the current overlay visual configuration.
+ */
+export function getOverlayConfig(): OverlayConfig {
+  return ExpoFocusControlModule.getOverlayConfig() as OverlayConfig;
+}
+
+/**
+ * Reset overlay customization back to default clean aesthetic.
+ */
+export function resetOverlayConfig(): void {
+  ExpoFocusControlModule.resetOverlayConfig();
+}
+
+/**
+ * Configure a block-based layout for the native WindowManager blocking overlay.
+ * Translates React Native StyleSheet-like blocks directly into native Android Views.
+ * Takes priority over setOverlayConfig when active.
+ *
+ * @param layout Layout configuration object with blocks or serialized JSON string.
+ */
+export function setOverlayLayout(layout: OverlayLayoutConfig | string): void {
+  const jsonStr = typeof layout === 'string' ? layout : JSON.stringify(layout);
+  ExpoFocusControlModule.setOverlayLayout(jsonStr);
+}
+
+/**
+ * Retrieve the current block-based layout configuration, or null if unset.
+ */
+export function getOverlayLayout(): OverlayLayoutConfig | null {
+  const raw = ExpoFocusControlModule.getOverlayLayout();
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as OverlayLayoutConfig;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Reset block-based layout, reverting overlay to the setOverlayConfig or default theme.
+ */
+export function resetOverlayLayout(): void {
+  ExpoFocusControlModule.resetOverlayLayout();
+}
+
+// ── Emergency Pass / Grace Period API ────────────────────────────────────
+
+/**
+ * Configure emergency pass rules (duration, daily limits, cooldown, button appearance).
+ * Automatically resets remaining pass counts at midnight each day.
+ */
+export function setEmergencyPassConfig(config: EmergencyPassConfig): void {
+  ExpoFocusControlModule.setEmergencyPassConfig(config);
+}
+
+/**
+ * Get current emergency pass configuration.
+ */
+export function getEmergencyPassConfig(): EmergencyPassConfig {
+  return ExpoFocusControlModule.getEmergencyPassConfig();
+}
+
+/**
+ * Reset emergency pass configuration back to defaults.
+ */
+export function resetEmergencyPassConfig(): void {
+  ExpoFocusControlModule.resetEmergencyPassConfig();
+}
+
+/**
+ * Get live status of emergency passes (remaining passes today, active pass timer, cooldown status).
+ * @param packageName Optional package name to check if it specifically is currently in grace period.
+ */
+export function getEmergencyPassStatus(packageName?: string): EmergencyPassStatus {
+  return ExpoFocusControlModule.getEmergencyPassStatus(packageName);
+}
+
+/**
+ * Programmatically activate an emergency pass for a package.
+ * Decrements daily pass count, unlocks the app for the specified minutes, and dismisses any active overlay.
+ * @param packageName Optional package name to unlock. If omitted, unlocks whatever app the user is opening.
+ * @param customMinutes Optional custom duration in minutes. If omitted, uses the configured durationMinutes.
+ */
+export function activateEmergencyPass(
+  packageName?: string,
+  customMinutes?: number
+): EmergencyPassActivationResult {
+  return ExpoFocusControlModule.activateEmergencyPass(packageName, customMinutes);
+}
+
+/**
+ * Manually cancel an active emergency pass early and restore blocking.
+ */
+export function cancelEmergencyPass(): void {
+  ExpoFocusControlModule.cancelEmergencyPass();
+}
+
+/**
+ * Manually reset remaining emergency passes back to the daily limit.
+ */
+export function resetEmergencyPasses(): void {
+  ExpoFocusControlModule.resetEmergencyPasses();
+}
+
+/**
+ * Grant extra bonus emergency passes for today.
+ * @param count Number of additional passes to add to today's remaining allowance.
+ */
+export function grantEmergencyPasses(count: number): void {
+  ExpoFocusControlModule.grantEmergencyPasses(count);
 }

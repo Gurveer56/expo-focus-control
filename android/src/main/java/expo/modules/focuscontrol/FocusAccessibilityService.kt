@@ -78,6 +78,15 @@ class FocusAccessibilityService : AccessibilityService() {
     }
 
     if (isBlocked) {
+      val inEmergency = EmergencyPassManager.isPackageInEmergency(this, packageName)
+      if (inEmergency) {
+        Log.d(TAG, "EMERGENCY_PASS_ACTIVE: Allowing temporary access to $packageName")
+        if (FocusOverlayManager.isOverlayShowing()) {
+          FocusOverlayManager.dismissOverlay("emergency_pass_active")
+        }
+        return
+      }
+
       Log.d(TAG, "BLOCKED_PACKAGE_MATCHED: $packageName")
       FocusOverlayManager.showOverlay(this, packageName)
       return

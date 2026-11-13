@@ -112,6 +112,64 @@ class ExpoFocusControlModule : Module() {
       )
     }
 
+    Function("setOverlayConfig") { config: Map<String, Any?> ->
+      OverlayConfig.save(context, config)
+    }
+
+    Function("getOverlayConfig") {
+      OverlayConfig.load(context).toMap()
+    }
+
+    Function("resetOverlayConfig") {
+      OverlayConfig.reset(context)
+    }
+
+    Function("setOverlayLayout") { layoutJson: String ->
+      OverlayLayoutConfig.save(context, layoutJson)
+    }
+
+    Function("getOverlayLayout") {
+      OverlayLayoutConfig.load(context)
+    }
+
+    Function("resetOverlayLayout") {
+      OverlayLayoutConfig.reset(context)
+    }
+
+    // ── Emergency Pass / Grace Period APIs ──────────────────────────────
+
+    Function("setEmergencyPassConfig") { config: Map<String, Any?> ->
+      EmergencyPassConfig.save(context, config)
+    }
+
+    Function("getEmergencyPassConfig") {
+      EmergencyPassConfig.load(context).toMap()
+    }
+
+    Function("resetEmergencyPassConfig") {
+      EmergencyPassConfig.reset(context)
+    }
+
+    Function("getEmergencyPassStatus") { packageName: String? ->
+      EmergencyPassManager.getStatus(context, packageName)
+    }
+
+    Function("activateEmergencyPass") { packageName: String?, customMinutes: Int? ->
+      EmergencyPassManager.activateEmergencyPass(context, packageName, customMinutes)
+    }
+
+    Function("cancelEmergencyPass") {
+      EmergencyPassManager.cancelEmergencyPass(context)
+    }
+
+    Function("resetEmergencyPasses") {
+      EmergencyPassManager.resetEmergencyPasses(context)
+    }
+
+    Function("grantEmergencyPasses") { count: Int ->
+      EmergencyPassManager.grantEmergencyPasses(context, count)
+    }
+
     // ── Focus Session & Website Blocking APIs ──────────────────────────
 
     Function("startFocusSession") { durationSeconds: Long, sessionName: String?, enableAppBlocking: Boolean? ->

@@ -240,7 +240,248 @@ FocusControl.stopAppBlocking();
 
 ---
 
-### D. Track Screen Time & Daily App Usage
+### D. Customizing the Native Blocking Overlay UI
+
+You can fully customize the visual appearance, texts, colors, sizes, alignment, emoji/icons, and buttons of the full-screen blocking overlay directly from TypeScript without writing native Android XML or Kotlin code:
+
+```tsx
+import * as FocusControl from 'expo-focus-control';
+
+// Customize overlay shield appearance
+FocusControl.setOverlayConfig({
+  // Text & Messages
+  title: 'Deep Work In Progress',
+  titleColor: '#FFFFFF',
+  titleSize: 24, // in sp
+  message: 'This application is restricted during your scheduled focus time. Take a deep breath and return to your goals.',
+  messageColor: '#94A3B8',
+  messageSize: 14,
+
+  // Icon / Emoji
+  iconEmoji: '🧘‍♂️', // Custom emoji or badge icon
+  iconSize: 64,     // in dp
+  showAppIcon: true, // Display the blocked app's real icon, falls back to iconEmoji
+
+  // Blocked App Name Label
+  showBlockedAppName: true,
+  blockedAppFormat: 'Restricted: %s',
+  badgeTextColor: '#F87171',
+  badgeTextSize: 13,
+
+  // Primary Action Button (Brings user back to your focus app)
+  showPrimaryButton: true,
+  primaryButtonText: 'Return to Focus',
+  primaryButtonColor: '#3B82F6',
+  primaryButtonTextColor: '#FFFFFF',
+
+  // Secondary Action Button (Sends user safely to Home Screen)
+  showSecondaryButton: true,
+  secondaryButtonText: 'Go to Home Screen',
+  secondaryButtonTextColor: '#94A3B8',
+
+  // Layout & Positioning
+  cardAlignment: 'center', // 'center' | 'top' | 'bottom'
+  cardMaxWidth: 360,       // in dp
+  cardCornerRadius: 28,    // rounded pill card
+  cardBackgroundColor: '#0F172A',
+  cardBorderColor: '#1E293B',
+  cardBorderWidth: 1,
+  backgroundColor: '#F2020617', // Semi-transparent dark blur backdrop
+});
+
+// Inspect current active config
+const currentConfig = FocusControl.getOverlayConfig();
+
+// Reset back to clean default aesthetic anytime
+FocusControl.resetOverlayConfig();
+```
+
+> **Persistence**: The overlay configuration is persisted in Android `SharedPreferences`. Once set, it stays active across app launches, device reboots, and applies even when your React Native app is completely backgrounded or closed.
+
+---
+
+### D2. Block-Based Layout Engine (Full Visual Freedom)
+
+When you need complete design freedom—such as Opal-style screens with custom image icons, streak badges, dynamic cards, spacers, and custom button placements—use the **Block-Based Layout Engine**.
+
+Similar to React Native's `StyleSheet`, you declare an ordered hierarchy of native blocks in TypeScript. The native module parses the configuration and converts it directly into native Android Views (`LinearLayout`, `TextView`, `Button`, `ImageView`, `FrameLayout`) in the `WindowManager` overlay:
+
+```tsx
+import * as FocusControl from 'expo-focus-control';
+
+// Configure a custom block-based overlay layout
+FocusControl.setOverlayLayout({
+  backgroundColor: '#0D1117',
+  paddingTop: 54,
+  paddingBottom: 36,
+  paddingHorizontal: 24,
+  cardMaxWidth: 380,
+  blocks: [
+    // 1. Hero icon: circular crimson container with custom PNG image & app badge
+    {
+      type: 'icon',
+      imageUri: 'data:image/png;base64,...', // Or file:/// or content:// URI
+      iconSize: 48,
+      containerSize: 92,
+      containerColor: '#3B1824',
+      containerBorderColor: '#EF4444',
+      containerBorderWidth: 1,
+      badgeEmoji: '💬',
+      badgeSize: 28,
+      badgeBackgroundColor: '#1F2937',
+      alignSelf: 'center',
+    },
+
+    // 2. Headline
+    {
+      type: 'text',
+      text: 'You’ve hit your limit',
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: '#FFFFFF',
+      textAlign: 'center',
+      marginTop: 22,
+    },
+
+    // 3. Subtitle with {appName} template substitution
+    {
+      type: 'text',
+      text: "You've used {appName} for 30 of 30 minutes today.",
+      fontSize: 14,
+      color: '#94A3B8',
+      textAlign: 'center',
+      marginTop: 8,
+    },
+
+    // 4. Streak pill or info badge
+    {
+      type: 'badge',
+      text: '🛡 Study streak protected (+45 XP)',
+      backgroundColor: '#1E293B',
+      textColor: '#22C55E',
+      borderRadius: 16,
+      fontSize: 13,
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      alignSelf: 'center',
+      marginTop: 16,
+    },
+
+    // 5. Flexible spacer pushing action buttons to bottom
+    {
+      type: 'spacer',
+      flex: 1,
+    },
+
+    // 6. Primary Action: Electric lime "Close app" button
+    {
+      type: 'button',
+      text: 'Close app',
+      action: 'close', // 'close' | 'emergency' | 'goHome'
+      backgroundColor: '#D4FF32',
+      textColor: '#000000',
+      borderRadius: 28,
+      height: 54,
+      fontSize: 16,
+      fontWeight: 'bold',
+      marginBottom: 12,
+    },
+
+    // 7. Secondary Action: Dark emergency pass button
+    {
+      type: 'button',
+      text: '⏱ Emergency use ({durationMinutes} min)',
+      action: 'emergency',
+      backgroundColor: '#1B222C',
+      textColor: '#F1F5F9',
+      borderRadius: 28,
+      height: 50,
+      fontSize: 14,
+      fontWeight: 'bold',
+      marginBottom: 10,
+    },
+
+    // 8. Footer subtext with {remainingPasses}
+    {
+      type: 'text',
+      text: '{remainingPasses} left today',
+      fontSize: 12,
+      color: '#64748B',
+      textAlign: 'center',
+    },
+  ],
+});
+
+// Retrieve or reset block layout
+const activeLayout = FocusControl.getOverlayLayout();
+FocusControl.resetOverlayLayout(); // Reverts to setOverlayConfig or default theme
+```
+
+#### Supported Block Types:
+| Block Type | Description | Key Properties |
+|---|---|---|
+| `text` | Dynamic text with template variables | `text`, `fontSize`, `fontWeight`, `color`, `textAlign`, `lineHeight` |
+| `button` | Native interactive button | `text`, `action` (`close`, `emergency`, `goHome`), `backgroundColor`, `textColor`, `borderRadius`, `borderWidth`, `borderColor`, `height` |
+| `icon` | Circular container with image/emoji + badge | `imageUri`, `emoji`, `iconSize`, `containerSize`, `containerColor`, `containerBorderColor`, `badgeEmoji`, `badgeImageUri`, `badgeSize` |
+| `image` | Standalone graphic or illustration | `uri` (file/content/base64), `width`, `height`, `borderRadius`, `resizeMode` |
+| `badge` | Rounded pill badge for status/streaks | `text`, `textColor`, `backgroundColor`, `borderRadius`, `paddingVertical`, `paddingHorizontal` |
+| `spacer` | Flexible or fixed vertical spacing | `flex` (default 1), `size` (fixed dp) |
+| `divider` | Horizontal divider line | `color`, `thickness` |
+| `card` | Grouped container with rounded border | `children`, `backgroundColor`, `borderColor`, `borderWidth`, `borderRadius`, `padding` |
+| `row` | Horizontal flex container | `children`, `justifyContent`, `alignItems`, `backgroundColor`, `padding` |
+
+#### Template Variables:
+All text strings in `text`, `button`, and `badge` blocks automatically replace:
+- `{appName}` — The human-readable name of the blocked application (e.g. `Reddit`, `Instagram`).
+- `{remainingPasses}` — Number of emergency passes remaining for today (e.g. `3`).
+- `{durationMinutes}` — Emergency pass duration in minutes (e.g. `5`).
+
+---
+
+### E. Emergency Passes & Temporary Grace Periods
+
+Allow users a strictly regulated number of emergency unlocks per day (e.g. 5 minutes, max 3 times daily) with automatic midnight reset, optional cooldowns, and automatic re-blocking when the minutes expire:
+
+```tsx
+import * as FocusControl from 'expo-focus-control';
+
+// 1. Configure the emergency pass rules
+FocusControl.setEmergencyPassConfig({
+  enabled: true,
+  durationMinutes: 5,           // Unlocks app for 5 minutes
+  dailyLimit: 3,                // Max 3 emergency unlocks per calendar day
+  cooldownMinutes: 10,          // 10-minute cooldown between passes to prevent abuse
+  showButtonOnOverlay: true,    // Shows emergency button directly on native overlay
+  buttonText: 'Emergency Access',
+  buttonColor: '#334155',
+  buttonTextColor: '#F8FAFC',
+  showRemainingCount: true,     // Shows "· 2 left" on the button
+});
+
+// 2. Query live status in your app UI
+const status = FocusControl.getEmergencyPassStatus();
+console.log(status.remainingPasses); // 2
+console.log(status.isPassActive);    // true if currently inside an emergency window
+console.log(status.remainingSeconds); // Seconds left before app re-locks
+console.log(status.isInCooldown);     // true if cooldown is active
+
+// 3. Programmatic controls (optional)
+// Trigger a pass directly from React Native:
+FocusControl.activateEmergencyPass('com.instagram.android', 5);
+
+// Cancel active pass immediately (restores blocking):
+FocusControl.cancelEmergencyPass();
+
+// Grant extra bonus passes or reset:
+FocusControl.grantEmergencyPasses(1);
+FocusControl.resetEmergencyPasses();
+```
+
+> **Zero Host Interaction Required**: When `showButtonOnOverlay` is enabled, users can tap the emergency button directly on the native blocking overlay to unlock the app without having to open your focus app first. When the timer expires, the overlay immediately re-appears and re-locks the application.
+
+---
+
+### F. Track Screen Time & Daily App Usage
 
 Query historical screen time directly from Android's `UsageStatsManager`:
 
@@ -266,7 +507,7 @@ const stats = await FocusControl.getUsageBetween(startTimestamp, endTimestamp);
 
 ---
 
-### E. Battery & OEM Diagnostics
+### G. Battery & OEM Diagnostics
 
 Background services can be silently restricted by aggressive OEM managers (Xiaomi, Samsung, Huawei). You can inspect this and route users to the appropriate settings:
 
@@ -289,7 +530,7 @@ FocusControl.openOemBatterySettings();
 
 ---
 
-### F. Timed Focus Sessions & Sticky Countdown Notification
+### H. Timed Focus Sessions & Sticky Countdown Notification
 
 Run a Pomodoro or custom focus session in the background with an ongoing status bar countdown notification:
 
@@ -322,7 +563,7 @@ FocusControl.stopFocusSession();
 
 ---
 
-### G. Website & Domain Blocking via Local DNS Sinkhole
+### I. Website & Domain Blocking via Local DNS Sinkhole
 
 Block distracting websites in Chrome, Brave, and other web browsers:
 
@@ -396,6 +637,32 @@ FocusControl.stopWebsiteBlocking();
   Deactivates blocking and removes any active overlay.
 - **`getAppBlockingStatus()`**: `AppBlockingStatus`  
   Returns `{ isBlockingActive, blockedApplications, overlayShowing }`.
+
+### Native Overlay UI Customization
+- **`setOverlayConfig(config: OverlayConfig)`**: `void`  
+  Configures overlay texts, colors, sizes, alignment (`'center' | 'top' | 'bottom'`), icon/emoji, and primary/secondary action buttons.
+- **`getOverlayConfig()`**: `OverlayConfig`  
+  Returns current active overlay UI configuration.
+- **`resetOverlayConfig()`**: `void`  
+  Resets overlay styling to module default theme.
+
+### Emergency Pass / Grace Period
+- **`setEmergencyPassConfig(config: EmergencyPassConfig)`**: `void`  
+  Configures pass duration (mins), daily limits, cooldown, and button styling.
+- **`getEmergencyPassConfig()`**: `EmergencyPassConfig`  
+  Returns active emergency pass configuration.
+- **`resetEmergencyPassConfig()`**: `void`  
+  Resets emergency pass configuration to defaults.
+- **`getEmergencyPassStatus(packageName?)`**: `EmergencyPassStatus`  
+  Returns daily remaining count, active timer, and cooldown info.
+- **`activateEmergencyPass(packageName?, customMinutes?)`**: `EmergencyPassActivationResult`  
+  Unlocks the app temporarily, decrements daily count, and dismisses overlay.
+- **`cancelEmergencyPass()`**: `void`  
+  Cancels active grace period early and re-arms blocking.
+- **`resetEmergencyPasses()`**: `void`  
+  Resets daily passes counter back to the configured limit.
+- **`grantEmergencyPasses(count: number)`**: `void`  
+  Adds bonus emergency passes to today's remaining allowance.
 
 ### Usage Stats
 - **`getDailyUsage(range, options?)`**: `Promise<UsageQueryResult>`  
