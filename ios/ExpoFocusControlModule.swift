@@ -3,8 +3,9 @@ import ExpoModulesCore
 /**
  * iOS native module for expo-focus-control.
  *
- * Phase 1: Basic permission status reporting and platform info.
- * Phase 4 will add FamilyControls, ManagedSettings, and DeviceActivity integration.
+ * Provides platform info and permission status reporting.
+ * Apple Screen Time Framework integration (FamilyControls, ManagedSettings, DeviceActivity)
+ * is coming soon.
  *
  * NOTE: Full Screen Time features require:
  * - Family Controls entitlement (approved by Apple)
@@ -97,7 +98,7 @@ public class ExpoFocusControlModule: Module {
       return false
     }
 
-    // ── Phase 3: Focus Session APIs ─────────────────────────────────────
+    // ── Focus Session APIs ──────────────────────────────────────────────
 
     Function("startFocusSession") { (durationSeconds: Double, sessionName: String?, enableAppBlocking: Bool?) -> [String: Any] in
       return [
@@ -159,7 +160,7 @@ public class ExpoFocusControlModule: Module {
       ]
     }
 
-    // ── Phase 3: Website Blocking APIs ──────────────────────────────────
+    // ── Website Blocking APIs ───────────────────────────────────────────
 
     Function("setBlockedWebsites") { (domains: [String]) in
     }
@@ -187,7 +188,7 @@ public class ExpoFocusControlModule: Module {
 
     AsyncFunction("queryUsageStats") { (startTime: Double, endTime: Double, excludeSelf: Bool, limit: Int, sortByUsage: Bool) -> [String: Any] in
       // iOS does not expose UsageStatsManager-equivalent data.
-      // Screen Time APIs (DeviceActivityReport) will be added in Phase 4.
+      // Screen Time APIs (DeviceActivityReport) are coming soon.
       return [
         "records": [] as [[String: Any]],
         "startTime": startTime,
@@ -197,7 +198,7 @@ public class ExpoFocusControlModule: Module {
 
     AsyncFunction("getInstalledApplications") { (includeSystemApps: Bool) -> [[String: Any]] in
       // iOS sandboxing prevents querying other third-party installed apps.
-      // In Phase 4, Screen Time / FamilyControls FamilyActivityPicker will be used.
+      // Screen Time FamilyActivityPicker support is coming soon.
       return []
     }
 
@@ -215,8 +216,6 @@ public class ExpoFocusControlModule: Module {
   // MARK: - Private Helpers
 
   private func getNotificationStatus() -> String {
-    // Synchronous check is not possible for UNUserNotificationCenter;
-    // for Phase 1 we report "denied" and will add async check later.
     return "denied"
   }
 

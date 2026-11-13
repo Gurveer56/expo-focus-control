@@ -90,7 +90,7 @@ class ExpoFocusControlModule : Module() {
       permissionManager.requestVpnPermission()
     }
 
-    // ── Phase 2: App Blocking APIs ──────────────────────────────────────
+    // ── App Blocking APIs ──────────────────────────────────────────────
 
     Function("setBlockedApplications") { packages: List<String> ->
       FocusBlockingManager.setBlockedApplications(context, packages)
@@ -112,7 +112,7 @@ class ExpoFocusControlModule : Module() {
       )
     }
 
-    // ── Phase 3: Focus Session & Website Blocking APIs ──────────────────
+    // ── Focus Session & Website Blocking APIs ──────────────────────────
 
     Function("startFocusSession") { durationSeconds: Long, sessionName: String?, enableAppBlocking: Boolean? ->
       FocusSessionManager.startFocusSession(

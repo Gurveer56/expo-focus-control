@@ -40,7 +40,7 @@ jest.mock('../ExpoFocusControlModule', () => ({
     openExactAlarmSettings: jest.fn(),
     getVpnStatus: jest.fn(() => 'denied'),
     requestVpnPermission: jest.fn(() => true),
-    // Phase 2 App Blocking mocks
+    // App Blocking mocks
     setBlockedApplications: jest.fn(),
     startAppBlocking: jest.fn(),
     stopAppBlocking: jest.fn(),
@@ -53,7 +53,7 @@ jest.mock('../ExpoFocusControlModule', () => ({
       { packageName: 'com.instagram.android', appName: 'Instagram', isSystemApp: false },
       { packageName: 'com.google.android.youtube', appName: 'YouTube', isSystemApp: false },
     ]),
-    // Phase 3 Focus Session mocks
+    // Focus Session mocks
     startFocusSession: jest.fn((durationSeconds: number, sessionName?: string, enableAppBlocking?: boolean) => ({
       isActive: true,
       isPaused: false,
@@ -99,7 +99,7 @@ jest.mock('../ExpoFocusControlModule', () => ({
       elapsedSeconds: 500,
       autoAppBlocking: true,
     })),
-    // Phase 3 Website Blocking mocks
+    // Website Blocking mocks
     setBlockedWebsites: jest.fn(),
     getBlockedWebsites: jest.fn(() => ['instagram.com', 'tiktok.com']),
     startWebsiteBlocking: jest.fn(() => true),
@@ -205,7 +205,7 @@ describe('ExpoFocusControl Public API', () => {
     });
   });
 
-  describe('Phase 2: App Blocking & Focus Session API', () => {
+  describe('App Blocking API', () => {
     it('configures blocked applications', () => {
       const packages = ['com.instagram.android', 'com.google.android.youtube'];
       FocusControl.setBlockedApplications(packages);
@@ -241,7 +241,7 @@ describe('ExpoFocusControl Public API', () => {
     });
   });
 
-  describe('Phase 3: Focus Session API', () => {
+  describe('Focus Session API', () => {
     it('starts a focus session with custom options', () => {
       const session = FocusControl.startFocusSession(1500, {
         sessionName: 'Pomodoro',
@@ -277,7 +277,7 @@ describe('ExpoFocusControl Public API', () => {
     });
   });
 
-  describe('Phase 3: Website Blocking API', () => {
+  describe('Website Blocking API', () => {
     it('configures and gets blocked websites', () => {
       FocusControl.setBlockedWebsites(['instagram.com', 'tiktok.com']);
       expect(ExpoFocusControlModule.setBlockedWebsites).toHaveBeenCalledWith(['instagram.com', 'tiktok.com']);

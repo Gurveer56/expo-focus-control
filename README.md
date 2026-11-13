@@ -22,7 +22,7 @@ Works with Continuous Native Generation (CNG) via an Expo Config Plugin.
 | Platform | Support | Requirements |
 | :--- | :--- | :--- |
 | **Android** | ✅ Full support | Android 7.0+ (API 24+) |
-| **iOS** | ⏳ Phase 4 | Requires Apple FamilyControls entitlement & App Extensions |
+| **iOS** | ⏳ Coming Soon | Apple Screen Time Frameworks |
 | **Expo SDK** | 58 | New Architecture (Fabric / TurboModules) enabled |
 
 ---
@@ -359,7 +359,7 @@ FocusControl.stopWebsiteBlocking();
 
 ## 4. API Reference
 
-### Timed Focus Sessions (Phase 3)
+### Timed Focus Sessions
 - **`startFocusSession(durationSeconds, options?)`**: `FocusSessionStatus`  
   Starts a timed session with a persistent status bar notification and auto-linked app blocking.
 - **`stopFocusSession()`**: `FocusSessionStatus`  
@@ -371,7 +371,7 @@ FocusControl.stopWebsiteBlocking();
 - **`getFocusSessionStatus()`**: `FocusSessionStatus`  
   Returns `{ isActive, isPaused, sessionName, durationSeconds, remainingSeconds, elapsedSeconds, autoAppBlocking }`.
 
-### Website & Domain Blocking (Phase 3)
+### Website & Domain Blocking
 - **`requestVpnPermission()`**: `boolean`  
   Opens Android's native VPN authorization dialog. Returns `true` if already authorized.
 - **`setBlockedWebsites(domains: string[])`**: `void`  
@@ -385,7 +385,7 @@ FocusControl.stopWebsiteBlocking();
 - **`getWebsiteBlockingStatus()`**: `WebsiteBlockingStatus`  
   Returns `{ isActive, blockedWebsites, vpnServiceRunning }`.
 
-### App Blocking & Selection (Phase 2)
+### App Blocking & Selection
 - **`getInstalledApplications(options?)`**: `Promise<InstalledApp[]>`  
   Returns all launchable apps on the device sorted alphabetically. Pass `{ includeSystemApps: true }` to include pre-installed system tools.
 - **`setBlockedApplications(packages: string[])`**: `void`  

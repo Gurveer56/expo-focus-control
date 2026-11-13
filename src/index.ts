@@ -111,7 +111,7 @@ export function requestVpnPermission(): boolean {
   return ExpoFocusControlModule.requestVpnPermission();
 }
 
-// ── Phase 2: App Blocking API ───────────────────────────────────────────
+// ── App Blocking API ───────────────────────────────────────────────────
 
 /**
  * Configure the list of application package names to block during active focus sessions.
@@ -157,7 +157,7 @@ export async function getInstalledApplications(
   return (raw ?? []) as InstalledApp[];
 }
 
-// ── Phase 3: Focus Session API ──────────────────────────────────────────
+// ── Focus Session API ──────────────────────────────────────────────────
 
 /**
  * Start a timed focus session in the background.
@@ -207,7 +207,7 @@ export function getFocusSessionStatus(): FocusSessionStatus {
   return ExpoFocusControlModule.getFocusSessionStatus();
 }
 
-// ── Phase 3: Website & Domain Blocking API ──────────────────────────────
+// ── Website & Domain Blocking API ──────────────────────────────────────
 
 /**
  * Configure the list of website domain names to block (e.g. ['instagram.com', 'reddit.com']).

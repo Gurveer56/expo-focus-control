@@ -30,15 +30,15 @@ expo-focus-control/
         FocusAccessibilityService.kt     <-- Window state monitoring & blocking trigger
         FocusOverlayService.kt           <-- TYPE_APPLICATION_OVERLAY window manager
         FocusBlockingManager.kt          <-- Blocking state & package persistence
-        FocusVpnService.kt               <-- Packet tunnel scaffold (Phase 3)
-        FocusSessionService.kt           <-- Foreground service scaffold
+        FocusVpnService.kt               <-- Packet tunnel DNS sinkhole
+        FocusSessionService.kt           <-- Foreground service countdown timer
         FocusBootReceiver.kt             <-- Device boot rescheduling
       res/xml/
         focus_accessibility_service.xml  <-- A11y service configuration
     build.gradle                         <-- Android library build script
   ios/                         <-- Reusable iOS native framework
     ExpoFocusControlModule.swift         <-- Expo Module definition
-    ScreenTime/                          <-- Screen Time API scaffolds (Phase 4)
+    ScreenTime/                          <-- Screen Time API scaffolds
   src/                         <-- TypeScript layer & public API
     ExpoFocusControl.types.ts            <-- Shared TypeScript interfaces & types
     ExpoFocusControlModule.ts            <-- NativeModule type declaration

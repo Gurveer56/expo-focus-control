@@ -43,7 +43,7 @@ class ExpoFocusControlModule extends NativeModule<ExpoFocusControlModuleEvents> 
   getVpnStatus() { return 'unavailable'; }
   requestVpnPermission() { return false; }
 
-  // Phase 2 stubs
+  // App Blocking stubs
   setBlockedApplications(_packages: string[]) {}
   startAppBlocking() {}
   stopAppBlocking() {}
@@ -58,7 +58,7 @@ class ExpoFocusControlModule extends NativeModule<ExpoFocusControlModuleEvents> 
     return [];
   }
 
-  // Phase 3 stubs
+  // Focus Session & Website Blocking stubs
   startFocusSession(durationSeconds: number, sessionName?: string, enableAppBlocking?: boolean): FocusSessionStatus {
     return {
       isActive: false,

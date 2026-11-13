@@ -20,21 +20,21 @@ declare class ExpoFocusControlModule extends NativeModule<ExpoFocusControlModule
   getVpnStatus(): string;
   requestVpnPermission(): boolean;
 
-  // Phase 2: App Blocking APIs
+  // App Blocking APIs
   setBlockedApplications(packages: string[]): void;
   startAppBlocking(): void;
   stopAppBlocking(): void;
   getAppBlockingStatus(): AppBlockingStatus;
   getInstalledApplications(includeSystemApps: boolean): Promise<Record<string, any>[]>;
 
-  // Phase 3: Focus Session APIs
+  // Focus Session APIs
   startFocusSession(durationSeconds: number, sessionName?: string, enableAppBlocking?: boolean): FocusSessionStatus;
   stopFocusSession(): FocusSessionStatus;
   pauseFocusSession(): FocusSessionStatus;
   resumeFocusSession(): FocusSessionStatus;
   getFocusSessionStatus(): FocusSessionStatus;
 
-  // Phase 3: Website Blocking APIs
+  // Website Blocking APIs
   setBlockedWebsites(domains: string[]): void;
   getBlockedWebsites(): string[];
   startWebsiteBlocking(): boolean;

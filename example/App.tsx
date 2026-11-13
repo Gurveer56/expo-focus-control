@@ -85,7 +85,7 @@ function PermissionRow({ label, status, onOpen }: PermissionRowProps) {
   );
 }
 
-// ── Phase 2: App Blocking Section ───────────────────────────────────────
+// ── App Blocking Section ─────────────────────────────────────────────────
 
 interface BlockingSectionProps {
   blockingStatus: AppBlockingStatus | null;
@@ -131,7 +131,7 @@ function BlockingSection({
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>App Blocking (Phase 2)</Text>
+        <Text style={styles.sectionTitle}>App Blocking</Text>
         <View style={[styles.statusBadge, { backgroundColor: isActive ? '#E8F5E9' : '#F5F5F5' }]}>
           <Text style={[styles.statusBadgeText, { color: isActive ? '#2E7D32' : '#757575' }]}>
             {isActive ? 'SESSION ACTIVE' : 'INACTIVE'}
@@ -256,7 +256,7 @@ function BlockingSection({
   );
 }
 
-// ── Phase 3: Timed Focus Session Section ────────────────────────────────
+// ── Timed Focus Session Section ─────────────────────────────────────────
 
 interface SessionSectionProps {
   sessionStatus: FocusSessionStatus | null;
@@ -286,7 +286,7 @@ function SessionSection({
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Focus Session (Phase 3)</Text>
+        <Text style={styles.sectionTitle}>Focus Session</Text>
         <View
           style={[
             styles.statusBadge,
@@ -352,7 +352,7 @@ function SessionSection({
   );
 }
 
-// ── Phase 3: Website / Domain Blocking Section ──────────────────────────
+// ── Website / Domain Blocking Section ───────────────────────────────────
 
 interface WebsiteSectionProps {
   vpnStatus: WebsiteBlockingStatus | null;
@@ -376,7 +376,7 @@ function WebsiteSection({ vpnStatus, onToggleDomain, onStartVpn, onStopVpn }: We
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Website Blocking (Phase 3)</Text>
+        <Text style={styles.sectionTitle}>Website Blocking</Text>
         <View style={[styles.statusBadge, { backgroundColor: isActive ? '#E8F5E9' : '#F5F5F5' }]}>
           <Text style={[styles.statusBadgeText, { color: isActive ? '#2E7D32' : '#757575' }]}>
             {isActive ? 'VPN ACTIVE' : 'INACTIVE'}
@@ -762,7 +762,7 @@ export default function App() {
           </Text>
         )}
 
-        {/* Phase 2: App Blocking & Focus Session */}
+        {/* App Blocking */}
         <BlockingSection
           blockingStatus={blockingStatus}
           installedApps={installedApps}
@@ -773,7 +773,7 @@ export default function App() {
           onTogglePackage={handleTogglePackage}
         />
 
-        {/* Phase 3: Focus Session */}
+        {/* Focus Session */}
         <SessionSection
           sessionStatus={sessionStatus}
           onStartSession={handleStartSession}
@@ -782,7 +782,7 @@ export default function App() {
           onResumeSession={handleResumeSession}
         />
 
-        {/* Phase 3: Website Blocking */}
+        {/* Website Blocking */}
         <WebsiteSection
           vpnStatus={vpnStatus}
           onToggleDomain={handleToggleDomain}

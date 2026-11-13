@@ -52,7 +52,7 @@ Use this skill when:
 **IMPORTANT**: Notifications (`POST_NOTIFICATIONS`) must **NOT** be managed by `expo-focus-control`. 
 - The consuming application handles notification requests and delivery through `expo-notifications`.
 - Do not add notification permission checkers, prompt methods, or manifest injections to `expo-focus-control`.
-- If a foreground service in future phases requires an ongoing notification under Android 14+ rules, document that requirement for the consuming app rather than managing general notification permissions inside this module.
+- If a foreground service requires an ongoing notification under Android 14+ rules, document that requirement for the consuming app rather than managing general notification permissions inside this module.
 
 ## Granular Battery Diagnostics Model
 
